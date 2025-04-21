@@ -1,0 +1,1 @@
+chrome.devtools.panels.create("Captured Requests", null, "panel.html");

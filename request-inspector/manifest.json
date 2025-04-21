@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Network Inspector",
+  "version": "1.0",
+  "description": "Adds a Network panel to DevTools",
+  "devtools_page": "devtools.html",
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "scripting"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>POST Request Demo</title>
+</head>
+<body>
+<h1>Test POST Capture</h1>
+
+<button id="fetchPost">Send via fetch</button>
+<button id="xhrPost">Send via XHR</button>
+
+<script>
+  const payload = {
+    "orderBook": {
+      "orderBookExtensions": [{
+        "orderTypes": { "id": 1, "orderTypeCode": "LMT" },
+        "disclosedQuantity": 0,
+        "orderValidity": { "id": 1, "orderValidityCode": "DAY" },
+        "triggerPrice": 0,
+        "orderPrice": 451.2,
+        "orderQuantity": 10,
+        "remainingOrderQuantity": 10,
+        "marketType": { "id": 2, "marketType": "Continuous" }
+      }],
+      "exchange": { "id": 1 },
+      "dnaConnection": {},
+      "dealer": {},
+      "member": {},
+      "productType": { "id": 1, "productCode": "CNC" },
+      "instrumentType": { "id": 1, "code": "EQ" },
+      "client": {
+        "activeStatus": "A",
+        "id": 2150894,
+        "accountType": "CLI",
+        "allowedToTrade": "Y",
+        "clientMemberCode": "2020087539",
+        "clientOrDealer": "C",
+        "contactNumber": "9865712688",
+        "notsUniqueClientCode": "202008171550473",
+        "clientGroup": { "activeStatus": "A", "id": 101 },
+        "memberBranch": { "activeStatus": "A", "id": 1 },
+        "displayName": "RAJKUMAR SHARMA",
+        "shortSellMode": 0,
+        "onlineOrOffline": 1,
+        "panNumber": "123603960",
+        "collateralCalculationMode": 1,
+        "kycUpload": false
+      },
+      "security": {
+        "id": 3073,
+        "exchangeSecurityId": 9250,
+        "marketProtectionPercentage": 0,
+        "divisor": 100,
+        "boardLotQuantity": 1,
+        "tickSize": 0.1
+      },
+      "accountType": 1,
+      "cpMemberId": 0,
+      "buyOrSell": 1
+    },
+    "orderPlacedBy": 2,
+    "exchangeOrderId": null
+  };
+
+  const customHeaders = {
+    "accept": "application/json, text/plain, */*",
+    "accept-encoding": "gzip, deflate, br, zstd",
+    "accept-language": "en-US,en;q=0.9,ne;q=0.8",
+    "content-type": "application/json",
+    "cookie": "_rid=abc...; _aid=xyz...; XSRF-TOKEN=a7da6584...",
+    "host-session-id": "TVRJPS1iODI5OWYzOS05ZTA0LTRhNzktYWZlNy0zODNhZWY5MDZmOWI=",
+    "origin": "https://tms44.nepsetms.com.np",
+    "priority": "u=1, i",
+    "referer": "https://tms44.nepsetms.com.np/tms/me/memberclientorderentry",
+    "request-owner": "92040",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
+    "x-xsrf-token": "a7da6584-cd92-416c-a514-49000e7b5392"
+  };
+
+  document.getElementById("fetchPost").addEventListener("click", () => {
+    fetch("https://httpbin.org/post", {
+      method: "POST",
+      headers: customHeaders,
+      body: JSON.stringify(payload)
+    })
+            .then(res => res.json())
+            .then(json => console.log("✅ Fetch Response:", json))
+            .catch(console.error);
+  });
+
+  document.getElementById("xhrPost").addEventListener("click", () => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "https://httpbin.org/post");
+    for (const key in customHeaders) {
+      try {
+        xhr.setRequestHeader(key, customHeaders[key]);
+      } catch (e) {
+        console.warn(`❌ Invalid header: ${key}`);
+      }
+    }
+    xhr.onload = () => {
+      console.log("✅ XHR Response:", JSON.parse(xhr.responseText));
+    };
+    xhr.onerror = console.error;
+    xhr.send(JSON.stringify(payload));
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symbol Select2 Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #f8f6f3;
+            color: #2e2e2e;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .select-container {
+            margin-bottom: 20px;
+        }
+        .select2-container {
+            width: 100% !important;
+        }
+        .id-display {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .id-value {
+            flex: 1;
+            padding: 10px;
+            background: #f1f1f1;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+        button {
+            background: #2e2e2e;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .textarea-label {
+            font-weight: 600;
+            margin-top: 20px;
+            display: block;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #2e2e2e;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Symbol Select Interface</h1>
+        
+        <div class="select-container">
+            <label for="symbol-select">Select Symbol:</label>
+            <select id="symbol-select" class="symbol-select2">
+                <option value="397">ADBL</option>
+    <option value="2855">ADBLD83</option>
+    <option value="2903">BOKD86</option>
+    <option value="141">LSL</option>
+    <option value="2848">LBLD86</option>
+    <option value="179">HEI</option>
+    <option value="700">HEIP</option>
+    <option value="192">SICL</option>
+    <option value="135">SBI</option>
+    <option value="2857">SBIBD86</option>
+    <option value="2967">SBID83</option>
+    <option value="3037">SBID89</option>
+    <option value="145">SBL</option>
+    <option value="2843">SBLD2082</option>
+    <option value="2836">SBLD83</option>
+    <option value="393">HLI</option>
+    <option value="348">CZBIL</option>
+    <option value="3055">CIZBD90</option>
+    <option value="2829">NBBD2085</option>
+    <option value="2847">SRBLD83</option>
+    <option value="137">EBL</option>
+    <option value="2972">EBLD85</option>
+    <option value="2999">EBLEB89</option>
+    <option value="341">GBIME</option>
+    <option value="134">HBL</option>
+    <option value="2844">HBLD83</option>
+    <option value="2984">HBLD86</option>
+    <option value="142">KBL</option>
+    <option value="2853">KBLD86</option>
+    <option value="2978">KBLD89</option>
+    <option value="255">PRVU</option>
+    <option value="2867">PBLD84</option>
+    <option value="2904">PBLD87</option>
+    <option value="632">PRVUPO</option>
+    <option value="140">MBL</option>
+    <option value="2837">MBLD2085</option>
+    <option value="2916">MBLD87</option>
+    <option value="131">NABIL</option>
+    <option value="2859">NBLD82</option>
+    <option value="2930">NBLD85</option>
+    <option value="3059">NABILD87</option>
+    <option value="517">NBL</option>
+    <option value="2901">NBLD87</option>
+    <option value="2892">NCCD86</option>
+    <option value="132">NIMB</option>
+    <option value="2827">NIBD2082</option>
+    <option value="3062">NIMBD90</option>
+    <option value="2897">NIBSF2</option>
+    <option value="469">NIMBPO</option>
+    <option value="139">NICA</option>
+    <option value="2840">NICAD8283</option>
+    <option value="2839">NICD83/84</option>
+    <option value="2917">NICD88</option>
+    <option value="3057">NICGF2</option>
+    <option value="238">NMB</option>
+    <option value="2826">NMBD2085</option>
+    <option value="3020">NMBD89/90</option>
+    <option value="357">PCBL</option>
+    <option value="2914">PBD85</option>
+    <option value="2957">PBD88</option>
+    <option value="2969">PBD84</option>
+    <option value="544">PCBLP</option>
+    <option value="171">SANIMA</option>
+    <option value="2815">SAND2085</option>
+    <option value="2881">SBD87</option>
+    <option value="133">SCB</option>
+    <option value="3019">SCBD</option>
+    <option value="164">CBBL</option>
+    <option value="450">CORBL</option>
+    <option value="274">EDBL</option>
+    <option value="490">FMDBL</option>
+    <option value="417">GBBL</option>
+    <option value="2936">GBBD85</option>
+    <option value="418">JBBL</option>
+    <option value="2924">JBBD87</option>
+    <option value="459">KSBBL</option>
+    <option value="2896">KSBBLD87</option>
+    <option value="371">MDB</option>
+    <option value="474">MNBBL</option>
+    <option value="2912">MND84/85</option>
+    <option value="172">NABBC</option>
+    <option value="396">NMLBBL</option>
+    <option value="163">NUBL</option>
+    <option value="472">SADBL</option>
+    <option value="2915">SDBD87</option>
+    <option value="473">SHINE</option>
+    <option value="545">SLBBL</option>
+    <option value="268">SWBBL</option>
+    <option value="166">DDBL</option>
+    <option value="401">MLBL</option>
+    <option value="3029">MLBLD89</option>
+    <option value="245">CFCL</option>
+    <option value="210">CIT</option>
+    <option value="232">GFCL</option>
+    <option value="2852">GWFD83</option>
+    <option value="227">BFC</option>
+    <option value="263">GMFIL</option>
+    <option value="273">ICFC</option>
+    <option value="2851">ICFCD83</option>
+    <option value="3071">ICFCD88</option>
+    <option value="250">JFL</option>
+    <option value="204">GUFL</option>
+    <option value="516">MFIL</option>
+    <option value="2888">MFLD85</option>
+    <option value="471">MPFL</option>
+    <option value="194">NFS</option>
+    <option value="236">PFL</option>
+    <option value="338">PROFL</option>
+    <option value="244">SIFC</option>
+    <option value="256">SFCL</option>
+    <option value="149">OHL</option>
+    <option value="147">SHL</option>
+    <option value="148">TRH</option>
+    <option value="195">BNL</option>
+    <option value="213">BNT</option>
+    <option value="235">HDL</option>
+    <option value="198">NLO</option>
+    <option value="219">UNL</option>
+    <option value="307">NTC</option>
+    <option value="360">AHPC</option>
+    <option value="153">BPCL</option>
+    <option value="154">CHCL</option>
+    <option value="152">NHPC</option>
+    <option value="156">BBC</option>
+    <option value="155">STC</option>
+    <option value="184">PRIN</option>
+    <option value="385">ALICL</option>
+    <option value="188">LICN</option>
+    <option value="186">IGI</option>
+    <option value="176">NICL</option>
+    <option value="183">NIL</option>
+    <option value="559">NLG</option>
+    <option value="187">NLIC</option>
+    <option value="178">NLICL</option>
+    <option value="582">NLICLP</option>
+    <option value="182">SPIL</option>
+    <option value="177">RBCL</option>
+    <option value="634">RBCLPO</option>
+    <option value="185">SALICO</option>
+    <option value="403">SJLIC</option>
+    <option value="180">UAIL</option>
+    <option value="587">RLFL</option>
+    <option value="583">GBLBS</option>
+    <option value="561">SINDU</option>
+    <option value="574">SKBBL</option>
+    <option value="591">SHPC</option>
+    <option value="593">KMCDB</option>
+    <option value="2950">CCBD88</option>
+    <option value="618">LLBS</option>
+    <option value="601">MLBBL</option>
+    <option value="686">BARUN</option>
+    <option value="697">API</option>
+    <option value="695">JSLBB</option>
+    <option value="706">SWMF</option>
+    <option value="610">RIDI</option>
+    <option value="687">VLBS</option>
+    <option value="704">NMBMF</option>
+    <option value="693">HLBSL</option>
+    <option value="705">GILB</option>
+    <option value="694">MATRI</option>
+    <option value="2832">SAPDBL</option>
+    <option value="1741">MERO</option>
+    <option value="2742">HIDCL</option>
+    <option value="2963">HIDCLP</option>
+    <option value="2743">NGPL</option>
+    <option value="2746">NMFBS</option>
+    <option value="2744">GRDBL</option>
+    <option value="2748">RSDC</option>
+    <option value="2751">KKHC</option>
+    <option value="2754">DHPL</option>
+    <option value="2757">AKPL</option>
+    <option value="2759">SPDL</option>
+    <option value="2758">FOWAD</option>
+    <option value="2761">SMATA</option>
+    <option value="2762">SMATAP</option>
+    <option value="2760">UMHL</option>
+    <option value="2766">CHL</option>
+    <option value="2767">HPPL</option>
+    <option value="358">LBBL</option>
+    <option value="3030">LBBLD89</option>
+    <option value="2768">MSLB</option>
+    <option value="2769">NHDL</option>
+    <option value="2770">SEF</option>
+    <option value="2771">SMB</option>
+    <option value="2776">RADHI</option>
+    <option value="2882">SLCF</option>
+    <option value="2986">SAGF</option>
+    <option value="2774">USLB</option>
+    <option value="2834">CMF2</option>
+    <option value="3024">C30MF</option>
+    <option value="2781">WNLB</option>
+    <option value="2784">NADEP</option>
+    <option value="2786">PMHPL</option>
+    <option value="2788">KPCL</option>
+    <option value="2789">AKJCL</option>
+    <option value="2791">JOSHI</option>
+    <option value="2790">ACLBSL</option>
+    <option value="2792">UPPER</option>
+    <option value="2793">SLBSL</option>
+    <option value="2794">GHL</option>
+    <option value="2795">ALBSL</option>
+    <option value="2796">SHIVM</option>
+    <option value="2797">UPCL</option>
+    <option value="2798">MHNL</option>
+    <option value="2799">PPCL</option>
+    <option value="2801">GMFBS</option>
+    <option value="2803">HURJA</option>
+    <option value="2814">GLBSL</option>
+    <option value="3045">TVCL</option>
+    <option value="2816">SMFBS</option>
+    <option value="2817">UNHPL</option>
+    <option value="2818">ILBS</option>
+    <option value="2820">NBF2</option>
+    <option value="2926">NBF3</option>
+    <option value="2822">RHPL</option>
+    <option value="2823">SJCL</option>
+    <option value="2831">SIGS2</option>
+    <option value="3021">SIGS3</option>
+    <option value="2833">NICBF</option>
+    <option value="2909">NICSF</option>
+    <option value="2953">NICFC</option>
+    <option value="2838">NMB50</option>
+    <option value="2976">NSIF2</option>
+    <option value="2845">SFMF</option>
+    <option value="2893">SBCF</option>
+    <option value="3000">SFEF</option>
+    <option value="2849">HDHPC</option>
+    <option value="2850">NRIC</option>
+    <option value="2854">NICLBSL</option>
+    <option value="2862">SMPDA</option>
+    <option value="2863">NRN</option>
+    <option value="2865">LUK</option>
+    <option value="3031">LVF2</option>
+    <option value="2907">SAMAJ</option>
+    <option value="2866">LEC</option>
+    <option value="2869">SSHL</option>
+    <option value="2870">SGIC</option>
+    <option value="2875">MEN</option>
+    <option value="2876">UMRH</option>
+    <option value="2877">PMLI</option>
+    <option value="2878">CGH</option>
+    <option value="2879">NIFRA</option>
+    <option value="2990">NIFRAUR85/86</option>
+    <option value="2884">MLBSL</option>
+    <option value="2883">GLH</option>
+    <option value="2889">KEF</option>
+    <option value="2954">KDBY</option>
+    <option value="3061">KSY</option>
+    <option value="2891">RURU</option>
+    <option value="2890">SHEL</option>
+    <option value="2894">CHDC</option>
+    <option value="2895">PSF</option>
+    <option value="3010">PRSF</option>
+    <option value="2898">JBLB</option>
+    <option value="2910">RMF1</option>
+    <option value="3016">RMF2</option>
+    <option value="2911">SRLI</option>
+    <option value="2918">RBBD83</option>
+    <option value="2920">MKJC</option>
+    <option value="2921">MLBS</option>
+    <option value="2923">TPC</option>
+    <option value="2922">SAHAS</option>
+    <option value="2925">MMF1</option>
+    <option value="2928">SPC</option>
+    <option value="2929">NYADI</option>
+    <option value="2933">MBJC</option>
+    <option value="2934">BNHC</option>
+    <option value="2937">ENL</option>
+    <option value="2941">NESDO</option>
+    <option value="2943">GVL</option>
+    <option value="2946">BHL</option>
+    <option value="2947">ULBSL</option>
+    <option value="2948">CYCL</option>
+    <option value="2949">RFPL</option>
+    <option value="2951">DORDI</option>
+    <option value="2955">BHDC</option>
+    <option value="2956">HHL</option>
+    <option value="2958">UHEWA</option>
+    <option value="2964">GIBF1</option>
+    <option value="2962">USHEC</option>
+    <option value="2960">SGHC</option>
+    <option value="2961">MHL</option>
+    <option value="2965">RHGCL</option>
+    <option value="2973">SPHL</option>
+    <option value="2971">AVYAN</option>
+    <option value="2974">PPL</option>
+    <option value="2975">DLBS</option>
+    <option value="2977">SIKLES</option>
+    <option value="2980">EHPL</option>
+    <option value="2981">SHLB</option>
+    <option value="2982">PHCL</option>
+    <option value="2983">BHPL</option>
+    <option value="2985">NIBLGF</option>
+    <option value="3064">NIBLSTF</option>
+    <option value="2989">UNLB</option>
+    <option value="2992">SMHL</option>
+    <option value="2993">SPL</option>
+    <option value="2994">SMH</option>
+    <option value="2997">KDL</option>
+    <option value="2996">AHL</option>
+    <option value="2995">MKHC</option>
+    <option value="3001">TAMOR</option>
+    <option value="3002">MHCL</option>
+    <option value="3003">SMJC</option>
+    <option value="3004">ANLB</option>
+    <option value="3007">MAKAR</option>
+    <option value="3008">MKHL</option>
+    <option value="3012">BEDC</option>
+    <option value="3011">DOLTI</option>
+    <option value="3013">CITY</option>
+    <option value="3014">MCHL</option>
+    <option value="3015">IHL</option>
+    <option value="3017">MEL</option>
+    <option value="3018">RAWA</option>
+    <option value="3022">NRM</option>
+    <option value="3025">USHL</option>
+    <option value="3023">ILI</option>
+    <option value="3027">TSHL</option>
+    <option value="3026">GCIL</option>
+    <option value="3028">KBSH</option>
+    <option value="3032">RNLI</option>
+    <option value="3034">MEHL</option>
+    <option value="3033">SNLI</option>
+    <option value="3035">ULHC</option>
+    <option value="3036">CLI</option>
+    <option value="3041">BGWT</option>
+    <option value="3040">HATHY</option>
+    <option value="3039">MANDU</option>
+    <option value="3042">MSHL</option>
+    <option value="3043">SONA</option>
+    <option value="3044">MMKJL</option>
+    <option value="3049">H8020</option>
+    <option value="3052">CKHL</option>
+    <option value="3051">VLUCL</option>
+    <option value="3050">MKCL</option>
+    <option value="3053">NWCL</option>
+    <option value="3054">HRL</option>
+    <option value="3060">SARBTM</option>
+    <option value="3066">MNMF1</option>
+    <option value="3069">GMLI</option>
+    <option value="3070">GSY</option>
+    <option value="3073">NMIC</option>
+    <option value="3074">CREST</option>
+            </select>
+        </div>
+        
+        <div class="id-display">
+            <div class="id-value" id="selected-id">No symbol selected</div>
+            <button id="copy-id-btn">Copy ID</button>
+        </div>
+        
+        <div class="textarea-container">
+            <label class="textarea-label" for="header-textarea">Header:</label>
+            <textarea id="header-textarea" placeholder="Enter header content here">documentIdDABC2EE56409E0B8F1C155F096ACCBCFdocumentLifecycleactiveframeTypeoutermost_frameinitiatornullmethodPOSTurlhttps://httpbin.org/postacceptapplication/json, text/plain, */*Accept-Encodinggzip, deflate, br, zstdaccept-languageen-US,en;q=0.9,ne;q=0.8content-typeapplication/jsonhost-session-idTVRJPS1iODI5OWYzOS05ZTA0LTRhNzktYWZlNy0zODNhZWY5MDZmOWI=Originnullpriorityu=1, irequest-owner92040sec-ch-ua"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"sec-ch-ua-mobile?0sec-ch-ua-platform"Windows"Sec-Fetch-DestemptySec-Fetch-ModecorsSec-Fetch-Sitecross-siteUser-AgentMozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36x-xsrf-tokena7da6584-cd92-416c-a514-49000e7b5392</textarea>
+            
+            <div class="button-group">
+                <button id="format-header-btn">Format Header</button>
+                <button id="copy-header-btn">Copy Header</button>
+            </div>
+            
+            <label class="textarea-label" for="payload-textarea">Payload:</label>
+            <textarea id="payload-textarea" placeholder="Enter payload content here"></textarea>
+            <button id="copy-payload-btn">Copy Payload</button>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification">Copied to clipboard!</div>
+    
+    <!-- Load jQuery and Select2 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // Initialize Select2
+            $('.symbol-select2').select2({
+                placeholder: 'Search for a symbol',
+                allowClear: true
+            });
+            
+            // Show ID when selection changes
+            $('#symbol-select').on('change', function() {
+                const selectedId = $(this).val();
+                if (selectedId) {
+                    $('#selected-id').text(selectedId);
+                } else {
+                    $('#selected-id').text('No symbol selected');
+                }
+            });
+            
+            // Copy functions
+            function showNotification() {
+                $('#notification').fadeIn();
+                setTimeout(() => {
+                    $('#notification').fadeOut();
+                }, 2000);
+            }
+            
+            // Copy ID
+            $('#copy-id-btn').on('click', function() {
+                const idValue = $('#selected-id').text();
+                if (idValue !== 'No symbol selected') {
+                    navigator.clipboard.writeText(idValue);
+                    showNotification();
+                }
+            });
+            
+            // Format header
+            $('#format-header-btn').on('click', function() {
+                const headerText = $('#header-textarea').val();
+                
+                // Defining regex patterns to match key-value pairs
+                const keyValuePairs = [];
+                let formattedHeader = '';
+                
+                // Common header fields to identify
+                const commonFields = [
+                    'documentId', 'documentLifecycle', 'frameType', 'initiator', 
+                    'method', 'url', 'accept', 'Accept-Encoding', 'accept-language',
+                    'content-type', 'host-session-id', 'Origin', 'priority', 
+                    'request-owner', 'sec-ch-ua', 'sec-ch-ua-mobile', 
+                    'sec-ch-ua-platform', 'Sec-Fetch-Dest', 'Sec-Fetch-Mode',
+                    'Sec-Fetch-Site', 'User-Agent', 'x-xsrf-token'
+                ];
+                
+                // Try to identify and split the header
+                let headerStr = headerText;
+                for (const field of commonFields) {
+                    const regex = new RegExp(`(${field})([^a-z-].*?)(?=[a-z-]+[A-Z]|$)`, 'i');
+                    const match = headerStr.match(regex);
+                    
+                    if (match) {
+                        keyValuePairs.push({
+                            key: match[1],
+                            value: match[2]
+                        });
+                        // Remove the matched part from the string
+                        headerStr = headerStr.replace(match[0], '');
+                    }
+                }
+                
+                // Format the identified pairs
+                formattedHeader = keyValuePairs.map(pair => `${pair.key}:${pair.value}`).join('\n');
+                
+                // Update the textarea with formatted content
+                $('#header-textarea').val(formattedHeader);
+            });
+            
+            // Copy header
+            $('#copy-header-btn').on('click', function() {
+                navigator.clipboard.writeText($('#header-textarea').val());
+                showNotification();
+            });
+            
+            // Copy payload
+            $('#copy-payload-btn').on('click', function() {
+                navigator.clipboard.writeText($('#payload-textarea').val());
+                showNotification();
+            });
+        });
+    </script>
+</div>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Percentage Calculator</title>
+    <style>
+        body { font-family: Arial, padding: 10px; width: 420px; }
+        label{
+            display: block;
+        }
+        label span{
+            width:50px;
+            display: inline-block;
+            margin-bottom: 11px;
+        }
+    </style>
+</head>
+<body>
+<p>332.7</p>
+<h3>Enter a number</h3>
+<input type="number" id="numberInput" placeholder="Enter a number" step="any" />
+<button id="calculateBtn">Calculate</button>
+<p id="result1" data-value=""></p>
+<p id="result2" data-value=""></p>
+<div>
+    <label>
+        <span>Price: </span><input type="number" id="price" placeholder="price">
+    </label>
+    <label>
+        <span>Quantity: </span><input type="number" id="quantity" placeholder="quantity" value="10">
+    </label>
+
+    <br>
+
+    <button id="fill_inputs">Fill inputs</button>
+    <button id="openInTab">Open in Tab</button>
+    <h3>Run Script for Auto order</h3>
+    <button id="start">Start</button>
+    <button id="stop">Stop</button>
+    <p id="status">
+
+    </p>
+
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
