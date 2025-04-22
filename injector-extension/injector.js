@@ -31,6 +31,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 function injectForm() {
+
     if (formDiv) return;
 
     formDiv = document.createElement("div");
@@ -295,6 +296,15 @@ function injectForm() {
 .reset-button:hover {
   background-color: #5a6268;
 }
+.box-order-entry.blur__options{
+    filter:unset !important;
+}
+.d-flex{
+display: flex;
+}
+.d-flex > .col{
+width:50%;
+}
 </style>
 
 <div id="custom-injector">
@@ -332,12 +342,21 @@ function injectForm() {
       <div class="column">
         <div class="section">
           <h4>Request Configuration</h4>
-          <label>Headers:</label>
+          <div class="d-flex">
+          <div class="col">
+           <label>Headers:</label>
           <textarea id="inject-header" rows="3"></textarea>
           <button id="format-header" type="button">Format Header</button>
-          
-          <label>Payload:</label>
+</div>
+<div class="col">
+ <label>Payload:</label>
           <textarea id="inject-body" rows="5"></textarea>
+</div>
+</div>
+          
+         
+          
+         
         </div>
       </div>
     </div>
@@ -350,6 +369,12 @@ function injectForm() {
     <button id="inject-stop" class="danger">Stop</button>
     <button id="start-random" class="success">Start Random</button>
     <button id="stop-random" class="danger">Stop Random</button>
+    
+    <label style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <input type="checkbox" id="stop-on-success" checked />
+            Stop on success
+            <button id="correct-fields" type="button">Update Payload</button>
+          </label>
     
     <span id="random-status"></span>
   </div>
@@ -439,6 +464,45 @@ function injectForm() {
 
     // Add reset counters button handler
     document.getElementById("reset-counters").addEventListener("click", resetCounters);
+
+    // Auto-format header on paste or input
+    document.getElementById("inject-header").addEventListener("input", () => {
+        const input = document.getElementById("inject-header").value;
+        const lines = input.split(/\r?\n/);
+        const output = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+
+            if (!line) continue;
+
+            // Handle ":key\nvalue" pattern
+            if (line.endsWith(":")) {
+                const key = line.slice(0, -1).trim();
+                const value = (lines[i + 1] || "").trim();
+                output.push(`${key}: ${value}`);
+                i++;
+            } else if (!line.includes(":")) {
+                const key = line;
+                const value = (lines[i + 1] || "").trim();
+                output.push(`${key}: ${value}`);
+                i++;
+            } else {
+                output.push(line);
+            }
+        }
+
+        document.getElementById("inject-header").value = output.join("\n");
+    });
+
+    ["symbol", "price", "quantity"].forEach(id => {
+        const input = document.getElementById(id);
+        input.addEventListener("input", () => {
+            correctInjectFields();
+        });
+    });
+
+
 }
 
 function resetCounters() {
@@ -676,11 +740,15 @@ function sendTradeRequest(headers, body, price, quantity) {
             try {
                 const responseObj = JSON.parse(response);
                 if (responseObj.status === "200") {
-                    // Decrement pending, increment success
                     window.requestCounters.pending--;
                     window.requestCounters.success++;
                     updateCountersDisplay();
                     showSuccessAlert();
+
+                    // ✅ Stop if "Stop on Success" is checked
+                    if (document.getElementById("stop-on-success")?.checked) {
+                        stopAllRequests();
+                    }
                 } else {
                     // Decrement pending, increment fail
                     window.requestCounters.pending--;
@@ -803,7 +871,7 @@ function correctInjectFields() {
     const quantity = parseInt(document.getElementById("quantity")?.value || 0);
     const textarea = document.getElementById("inject-body");
 
-    // Update the display elements in the Request tab
+    // Update displayed info in request tab
     document.getElementById("display-symbol").textContent = symbol_id;
     document.getElementById("display-quantity").textContent = quantity;
     document.getElementById("display-price").textContent = price;
@@ -829,13 +897,14 @@ function correctInjectFields() {
             }
         }
 
-        // Set updated JSON
-        textarea.value = JSON.stringify(payload, null, 2);
+        // Set updated and minified JSON
+        textarea.value = JSON.stringify(payload); // minified, no spacing
     } catch (e) {
         console.error("Error updating payload:", e);
         alert("Error: Invalid JSON format in payload");
     }
 }
+
 
 function persistFormState() {
     const elements = formDiv.querySelectorAll("input, textarea");
