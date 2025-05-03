@@ -1,3 +1,7 @@
+let allPrices = [];
+let successPrices = [];
+let keepRetrying = true;
+
 if (typeof window.formDiv === "undefined") {
     window.formDiv = null;
     window.interval = null;
@@ -9,6 +13,8 @@ if (typeof window.formDiv === "undefined") {
         fail: 0,
         pending: 0
     };
+    window.successOrderNumbers = []; // ✅ new array to save success first row Order numbers
+
 }
 
 // Make sure we always have counters defined even if the above condition doesn't run
@@ -215,11 +221,12 @@ function injectForm() {
 .current-order-info {
   display: flex;
   gap: 15px;
-  font-size: 13px;
+  
 }
 
 .current-order-info span {
   white-space: nowrap;
+  font-size: 19px;
 }
 
 /* New counter styles */
@@ -235,7 +242,6 @@ function injectForm() {
 .counter-box {
   padding: 15px 25px;
   border-radius: 8px;
-  min-width: 120px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
@@ -301,9 +307,39 @@ function injectForm() {
 }
 .d-flex{
 display: flex;
+gap:10px;
 }
 .d-flex > .col{
 width:50%;
+}
+#custom-injector #tab-navigation button{
+    border-radius: unset;
+    margin-right: 4px;
+    margin-top:4px;
+    margin-bottom: 0;
+    background: unset;
+    color: #000;
+}
+#custom-injector #tab-navigation button.active{
+    border:1px solid #000;
+    font-weight: 600;
+}
+#custom-injector .tab-content{
+    border-top: 1px solid #000;
+    margin-top: -2px;
+}
+#custom-injector #tab-navigation button:hover{
+    background: #00000070;
+}
+
+button[data-quantity].active {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+}
+#price-table tbody tr:first-child{
+    background:#007bff;
+    color:#fff
 }
 </style>
 
@@ -312,6 +348,8 @@ width:50%;
     <button class="tab-button active" data-tab="calculation">Calculation</button>
     <button class="tab-button" data-tab="order">Order</button>
     <button class="tab-button" data-tab="request">Request and Response</button>
+    <button class="tab-button" data-tab="placed">Order Complete</button>
+
   </div>
   
   <div id="calculation-tab" class="tab-content active">
@@ -323,21 +361,7 @@ width:50%;
   
   <div id="order-tab" class="tab-content">
     <div class="two-column">
-      <div class="column">
-        <div class="section">
-          <h4>Order Parameters</h4>
-          <label>LTP<input type="number" id="ltp" placeholder="LTP"></label>
-          <label>Symbol: <input type="number" id="symbol" placeholder="Symbol ID"></label>
-          <label>Price: <input type="number" id="price" step="0.1" placeholder="Price"></label>
-          <label>Quantity: <input type="number" id="quantity" placeholder="Quantity"></label>
-          
-          <label style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
-            <input type="checkbox" id="use-ltp-checkbox" checked />
-            Use LTP + 2%
-            <button id="correct-fields" type="button">Update Payload</button>
-          </label>
-        </div>
-      </div>
+      
       
       <div class="column">
         <div class="section">
@@ -370,10 +394,9 @@ width:50%;
     <button id="start-random" class="success">Start Random</button>
     <button id="stop-random" class="danger">Stop Random</button>
     
-    <label style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+    <label style="display:flex;align-items:center;gap:6px;">
             <input type="checkbox" id="stop-on-success" checked />
             Stop on success
-            <button id="correct-fields" type="button">Update Payload</button>
           </label>
     
     <span id="random-status"></span>
@@ -387,8 +410,10 @@ width:50%;
     <span><strong>Price:</strong> <span id="display-price">-</span></span>
   </div>
 </div>
-    
+    <div class="d-flex">
+        
     <!-- Replace table with counters -->
+    <div  style="width: 33.33%">
     <div class="request-counters">
       <div class="counter-box counter-success">
         <div>SUCCESS</div>
@@ -403,8 +428,78 @@ width:50%;
         <div class="counter-value" id="pending-counter">0</div>
       </div>
     </div>
+</div>
+    
+    
+    <div class="order__parameter"  style="width: 33.33%">
+            <div class="column">
+                <div class="section">
+                  <h4>Order Parameters</h4>
+                  <label>LTP<input type="number" id="ltp" placeholder="LTP"></label>
+                  <label>Symbol: <input type="number" id="symbol" placeholder="Symbol ID"></label>
+                  <label>Price: <input type="number" id="price" step="0.1" placeholder="Price"></label>
+                  <label>Quantity: <input type="number" id="quantity" placeholder="Quantity"></label>
+                  
+                  <label style="display:flex;align-items:center;gap:6px;margin-bottom:0px;justify-content: left">
+                    <input type="checkbox" id="use-ltp-checkbox" />
+                    Use LTP + 2%
+        <!--            <button id="correct-fields" type="button">Update Payload</button>-->
+                  </label>
+                </div>
+          </div>
+    </div>
+    
+    <div class="table_calculation" style="width: 33.33%">
+    <h4>Auto Price Steps</h4>
+    <input id="percent-seed" type="number" placeholder="Enter base price..." style="width: 100%; margin-bottom: 6px;" />
+    <button id="add-percent-row" type="button">Add Price Row</button>
+     <button id="use-preclose-btn" type="button" class="reset-button">Use Pre Close</button> <!-- ✅ Add Here -->
+    <div class="quantity__btn">
+    Quantity: <button data-quantity="10">10</button> <button data-quantity="500">500</button> <button data-quantity="1000">1000</button>
+</div>
+    <table id="price-table" border="1" style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px;">
+        <thead>
+            <tr>
+                <th>Base</th>
+                <th>+2%</th>
+                <th>+2%</th>
+                <th>+2%</th>
+                <th>+2%</th>
+                <th>+2%</th>
+                <th>+10%</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+
+</div>
+    
+    
     <button id="reset-counters" class="reset-button">Reset Counters</button>
+    <button id="download-logs" class="reset-button">Download Logs</button>
+    <button id="first-order-btn" class="reset-button">First Order</button>
+
+
   </div>
+  
+  <div id="placed-tab" class="tab-content">
+  <h4>Order Placed Records</h4>
+  <table id="order-records-table" border="1" style="width:100%; text-align:center; border-collapse:collapse;">
+    <thead>
+      <tr style="background: #007bff; color: white;">
+        <th>Price</th>
+        <th>Quantity</th>
+        <th>Recorded Order Number</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Dynamically added rows -->
+    </tbody>
+  </table>
+</div>
+
 </div>
 `;
 
@@ -421,6 +516,23 @@ width:50%;
     // Set up state persistence
     restoreFormState();
     persistFormState();
+
+    document.getElementById("download-logs").addEventListener("click", () => {
+        if (!window.requestHistory || window.requestHistory.length === 0) {
+            alert("No request history to download.");
+            return;
+        }
+
+        const blob = new Blob([JSON.stringify(window.requestHistory, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "request_history.json";
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+
 
     // Initialize counter display
     updateCountersDisplay();
@@ -471,29 +583,53 @@ width:50%;
         const lines = input.split(/\r?\n/);
         const output = [];
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
+        let overrides = {
+            ":method": "POST",
+            ":path": "/tmsapi/orderApi/order/",
+            ":scheme": "https",
+            "content-type": "application/json"
+        };
 
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i].trim();
             if (!line) continue;
 
-            // Handle ":key\nvalue" pattern
             if (line.endsWith(":")) {
                 const key = line.slice(0, -1).trim();
                 const value = (lines[i + 1] || "").trim();
-                output.push(`${key}: ${value}`);
                 i++;
+                output.push(`${key}: ${value}`);
             } else if (!line.includes(":")) {
                 const key = line;
                 const value = (lines[i + 1] || "").trim();
-                output.push(`${key}: ${value}`);
                 i++;
+                output.push(`${key}: ${value}`);
             } else {
                 output.push(line);
             }
         }
 
-        document.getElementById("inject-header").value = output.join("\n");
+        // Apply overrides
+        const parsed = {};
+        output.forEach(line => {
+            const [key, ...rest] = line.split(":");
+            parsed[key.trim()] = rest.join(":").trim();
+        });
+
+        Object.entries(overrides).forEach(([k, v]) => {
+            parsed[k] = v;
+        });
+
+        // Rebuild headers
+        const finalHeader = Object.entries(parsed)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join("\n");
+
+        document.getElementById("inject-header").value = finalHeader;
+
+        updateContentLengthInHeader();
     });
+
 
     ["symbol", "price", "quantity"].forEach(id => {
         const input = document.getElementById(id);
@@ -502,8 +638,316 @@ width:50%;
         });
     });
 
+    document.getElementById("inject-body").addEventListener("input", updateContentLengthInHeader);
+
+    // ✅ Handle Price Table Row Insertion
+    const percentSeedInput = document.getElementById("percent-seed");
+    const addRowBtn = document.getElementById("add-percent-row");
+    const priceTableBody = document.querySelector("#price-table tbody");
+
+    addRowBtn.addEventListener("click", () => {
+        const base = parseFloat(percentSeedInput.value);
+        if (isNaN(base)) {
+            alert("Enter a valid number");
+            return;
+        }
+
+        const row = document.createElement("tr");
+        const percentages = [2, 2, 2, 2, 2]; // 5 times +2%
+        let current = base;
+
+        function truncate1Decimal(val) {
+            return Math.floor(val * 10) / 10;
+        }
+
+        // First column - base
+        const baseCell = document.createElement("td");
+        const baseTruncated = truncate1Decimal(base);
+        baseCell.textContent = baseTruncated.toFixed(1);
+        baseCell.style.cursor = "pointer";
+        baseCell.onclick = () => {
+            document.getElementById("price").value = baseTruncated;
+            correctInjectFields();
+        };
+        row.appendChild(baseCell);
+
+        // Now 5 times +2%
+        percentages.forEach(percent => {
+            const plus = current * (percent / 100);
+            const next = current + plus;
+            const truncated = truncate1Decimal(next);
+
+            const td = document.createElement("td");
+            td.textContent = truncated.toFixed(1);
+            td.style.cursor = "pointer";
+            td.onclick = () => {
+                document.getElementById("price").value = truncated;
+                correctInjectFields();
+            };
+            row.appendChild(td);
+
+            current = truncated; // IMPORTANT: next step from here
+        });
+
+        // Last: +10% of BASE
+        const finalPlus = base * 0.10;
+        const finalValue = base + finalPlus;
+        const finalTruncated = truncate1Decimal(finalValue);
+
+        const td = document.createElement("td");
+        td.textContent = finalTruncated.toFixed(1);
+        td.style.cursor = "pointer";
+        td.onclick = () => {
+            document.getElementById("price").value = finalTruncated;
+            correctInjectFields();
+        };
+        row.appendChild(td);
+
+        priceTableBody.appendChild(row);
+        percentSeedInput.value = "";
+    });
+
+
+    percentSeedInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault(); // Prevent form submission or reload
+            addRowBtn.click(); // Trigger the same function as button
+        }
+    });
+
+
+    document.querySelectorAll('[data-quantity]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const qty = btn.getAttribute('data-quantity');
+            document.getElementById('quantity').value = qty;
+            correctInjectFields();
+
+            // Remove active class from all
+            document.querySelectorAll('[data-quantity]').forEach(b => b.classList.remove('active'));
+
+            // Add active to clicked one
+            btn.classList.add('active');
+        });
+    });
+
+
+    document.getElementById("first-order-btn").addEventListener("click", () => {
+        try {
+            // ✅ Always regenerate fresh prices
+            localStorage.removeItem("pending_prices");
+            generatePricePoints();
+
+            let ltp = null;
+            let high = null;
+            let preClose = null;
+
+            const blocks = document.querySelectorAll(".order__form--prodtype");
+
+            blocks.forEach(block => {
+                const label = block.querySelector("label")?.innerText?.trim().toLowerCase();
+                if (!label) return;
+
+                if (label === "ltp") {
+                    const rawText = block.textContent || "";
+                    const matches = rawText.match(/([\d,]+\.\d+)/);
+                    if (matches && matches[1]) {
+                        ltp = parseFloat(matches[1].replace(/,/g, ""));
+                    }
+                }
+
+                if (label === "high") {
+                    const bTag = block.querySelector("b");
+                    if (bTag) {
+                        high = parseFloat(bTag.innerText.replace(/,/g, ""));
+                    } else {
+                        const rawText = block.textContent || "";
+                        const matches = rawText.match(/([\d,]+\.\d+)/);
+                        if (matches && matches[1]) {
+                            high = parseFloat(matches[1].replace(/,/g, ""));
+                        }
+                    }
+                }
+
+                if (label === "pre close") {
+                    const rawText = block.textContent || "";
+                    const match = rawText.match(/([\d,]+\.\d+)/);
+                    if (match && match[1]) {
+                        preClose = parseFloat(match[1].replace(/,/g, ""));
+                    }
+                }
+            });
+
+            if (ltp !== null && high !== null) {
+                console.log("✅ Captured LTP:", ltp, "| HIGH:", high);
+
+                // Update floating panel
+                document.getElementById("ltp").value = ltp;
+                document.getElementById("price").value = high;
+                document.getElementById("quantity").value = 10;
+
+                if (preClose !== null) {
+                    document.getElementById("percent-seed").value = preClose;
+                    document.getElementById("add-percent-row").click();
+                    console.log("✅ Pre Close used:", preClose);
+                } else {
+                    alert("❌ Pre Close not found.");
+                }
+
+                correctInjectFields();
+
+                // Update real page form inputs
+                const priceInput = document.querySelector('input[formcontrolname="price"]');
+                const qtyInput = document.querySelector('input[formcontrolname="quantity"]');
+
+                if (priceInput) {
+                    priceInput.value = high;
+                    priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+
+                if (qtyInput) {
+                    qtyInput.value = 10;
+                    qtyInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+
+                // ✅ Auto-click BUY button
+                const buttons = document.querySelectorAll("button.btn-primary");
+                const buyButton = Array.from(buttons).find(btn => btn.textContent.trim().toUpperCase() === "BUY");
+
+                if (buyButton && !buyButton.disabled) {
+                    buyButton.click();
+                    console.log("✅ BUY button clicked automatically");
+                } else {
+                    console.error("❌ BUY button not found or disabled");
+                    alert("❌ BUY button not found or disabled");
+                }
+
+            } else {
+                console.error("❌ Could not capture LTP or HIGH");
+                alert("❌ Could not capture LTP or HIGH values. Please refresh or check structure.");
+            }
+
+        } catch (error) {
+            console.error("❌ Fatal error in First Order button:", error);
+            alert("❌ Error capturing LTP / HIGH");
+        }
+    });
+
+
+
+
+
+    document.getElementById("use-preclose-btn").addEventListener("click", () => {
+        const blocks = document.querySelectorAll(".order__form--prodtype");
+        let preClose = null;
+
+        blocks.forEach(block => {
+            const label = block.querySelector("label")?.innerText?.trim().toLowerCase();
+            if (label === "pre close") {
+                const raw = block.textContent || "";
+                const match = raw.match(/([\d,]+\.\d+)/);
+                if (match && match[1]) {
+                    preClose = parseFloat(match[1].replace(/,/g, ""));
+                }
+            }
+        });
+
+        if (preClose !== null) {
+            document.getElementById("percent-seed").value = preClose;
+            document.getElementById("add-percent-row").click();
+            console.log("✅ Pre Close used:", preClose);
+        } else {
+            alert("❌ Could not find 'Pre Close' value.");
+        }
+    });
+
+
+
 
 }
+
+//end of inject form
+
+function loadPendingPrices() {
+    const saved = localStorage.getItem("pending_prices");
+    if (saved) {
+        allPrices = JSON.parse(saved);
+        console.log("✅ Restored saved pending prices:", allPrices);
+    } else {
+        generatePricePoints();
+    }
+}
+
+function savePendingPrices() {
+    localStorage.setItem("pending_prices", JSON.stringify(allPrices));
+}
+
+
+
+function generatePricePoints() {
+    const ltp = parseFloat(document.getElementById("ltp").value);
+    const up = ltp + (ltp * 0.02);
+    const down = ltp - (ltp * 0.02);
+    const step = 0.1;
+
+    // allPrices = [];
+
+    const upperLimit = Math.floor(up * 10) / 10;
+    let lowerLimit = Math.ceil(down * 10) / 10;
+
+    // 🔒 Ensure lowerLimit is not mistakenly rounded down due to floating-point precision
+    if (lowerLimit <= down) {
+        lowerLimit += 0.1;
+        lowerLimit = Math.round(lowerLimit * 10) / 10;
+    }
+
+    for (let p = lowerLimit; p <= upperLimit + 0.001; p += step) {
+        const price = Math.round(p * 10) / 10;
+        allPrices.push(price);
+    }
+
+    console.log(`✅ Final Range: ${lowerLimit} → ${upperLimit}`);
+    console.log("✅ Final Price List:", allPrices);
+    savePendingPrices();
+}
+
+
+
+
+
+function addOrderRecord(price, quantity, orderNumber) {
+    const table = document.getElementById('order-records-table').querySelector('tbody');
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${price}</td>
+      <td>${quantity}</td>
+      <td>${orderNumber}</td>
+    `;
+    table.appendChild(row);
+}
+
+
+function updateContentLengthInHeader() {
+    const headerTextarea = document.getElementById("inject-header");
+    const bodyTextarea = document.getElementById("inject-body");
+
+    const headers = parseHeaders(headerTextarea.value);
+    const body = bodyTextarea.value || "";
+
+    // Calculate actual byte length
+    const encoder = new TextEncoder();
+    const contentLength = encoder.encode(body).length;
+
+    // Update the header object
+    headers["content-length"] = contentLength.toString();
+
+    // Re-render the headers textarea
+    const updatedHeader = Object.entries(headers)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("\n");
+
+    headerTextarea.value = updatedHeader;
+}
+
 
 function resetCounters() {
     // Ensure requestCounters exists
@@ -613,8 +1057,7 @@ function setupButtonHandlers() {
     document.getElementById("start-random").onclick = startRandomPriceRequests;
     document.getElementById("stop-random").onclick = stopRandomPriceRequests;
 
-    // Field correction
-    document.getElementById("correct-fields").onclick = correctInjectFields;
+
 }
 
 function startRegularRequests() {
@@ -631,7 +1074,7 @@ function startRegularRequests() {
     const delay = perSec > 0 ? Math.floor(1000 / perSec) : 1000;
 
     interval = setInterval(() => {
-        sendTradeRequest(headers, body, price, quantity);
+        sendTradeRequest(headers, body, price, quantity, null, true);
     }, delay);
 }
 
@@ -641,8 +1084,7 @@ function stopRegularRequests() {
 }
 
 function startRandomPriceRequests() {
-    stopAllRequests(); // Safety: stop any existing intervals
-
+    stopAllRequests(); // Clear previous runs
     const ltp = parseFloat(document.getElementById("ltp").value);
     const upper = parseFloat(document.getElementById("price").value);
     const statusDiv = document.getElementById("random-status");
@@ -652,81 +1094,58 @@ function startRandomPriceRequests() {
         return;
     }
 
-    statusDiv.textContent = `Sending 2x each price every 1s: ${ltp.toFixed(1)} → ${upper.toFixed(1)}`;
+    loadPendingPrices(); // Load or generate allPrices
+    successPrices = []; // Reset success tracking
 
-    const rawHeader = document.getElementById("inject-header").value;
-    const headers = parseHeaders(rawHeader);
-    // Force Content-Type to application/json
-    headers["Content-Type"] = "application/json";
-    const baseBody = document.getElementById("inject-body").value;
+    // ✅ Split into two batches
+    const lowerToLTP = allPrices.filter(p => p <= ltp);
+    const LTPToUpper = allPrices.filter(p => p > ltp);
 
-    try {
-        const basePayload = JSON.parse(baseBody);
-        const symbolId = parseInt(document.getElementById("symbol").value);
-        const quantity = parseInt(document.getElementById("quantity").value);
+    // Send both batches with 1-second delay between them
+    sendAllPrices(lowerToLTP, "lowerToLTP");
+    setTimeout(() => sendAllPrices(LTPToUpper, "LTPToUpper"), 1000);
 
-        // Generate price points between LTP and LTP + 2%
-        const pricePoints = [];
-        for (let p = ltp; p <= upper + 0.001; p += 0.1) {
-            pricePoints.push(Math.floor(p * 10) / 10);
-        }
+    // Start retry loop from second 2 onward
+    setTimeout(() => retryUntilSuccess(), 2000);
 
-        const doubleBatch = [...pricePoints, ...pricePoints]; // 2x
-
-        randomInterval = setInterval(() => {
-            doubleBatch.forEach(price => {
-                const payload = JSON.parse(JSON.stringify(basePayload));
-
-                if (payload.orderBook) {
-                    payload.orderBook.orderBookExtensions?.forEach(ext => {
-                        ext.orderPrice = price;
-                        ext.orderQuantity = quantity;
-                    });
-
-                    if (payload.orderBook.security) {
-                        payload.orderBook.security.id = symbolId;
-                    }
-                }
-
-                sendTradeRequest(headers, JSON.stringify(payload), price, quantity);
-            });
-        }, 1000);
-
-    } catch (e) {
-        console.error("Payload error:", e);
-        alert("❌ Invalid payload format");
-        statusDiv.textContent = "❌ Invalid payload format";
-    }
+    statusDiv.textContent = `📤 Sending ${allPrices.length} prices in batches...`;
 }
+
+
+
+
 
 function stopRandomPriceRequests() {
     clearInterval(randomInterval);
     randomInterval = null;
+    keepRetrying = false; // 🔒 Stop further retries
     document.getElementById("random-status").textContent = "";
 }
+
 
 function stopAllRequests() {
     stopRegularRequests();
     stopRandomPriceRequests();
 }
 
-function sendTradeRequest(headers, body, price, quantity) {
-    // Ensure requestCounters exists
+function sendTradeRequest(headers, body, price, quantity, callback, respectStopOnSuccess = true) {
     if (!window.requestCounters) {
-        window.requestCounters = {
-            success: 0,
-            fail: 0,
-            pending: 0
-        };
+        window.requestCounters = { success: 0, fail: 0, pending: 0 };
+    }
+    if (!window.requestHistory) {
+        window.requestHistory = [];
     }
 
-    // Add entry to request history with pending status
-    const requestId = Date.now().toString();
-
-    // Increment pending counter
     window.requestCounters.pending++;
     updateCountersDisplay();
-    console.log(headers);
+
+    const logEntry = {
+        timestamp: new Date().toISOString(),
+        requestHeaders: headers,
+        requestBody: body,
+        responseStatus: null,
+        responseBody: null
+    };
 
     fetch("https://tms44.nepsetms.com.np/tmsapi/orderApi/order/", {
         method: "POST",
@@ -734,42 +1153,120 @@ function sendTradeRequest(headers, body, price, quantity) {
         body,
         credentials: "include"
     })
-        .then(res => res.text())
-        .then(response => {
-            console.log("Request success:", response);
-            try {
-                const responseObj = JSON.parse(response);
-                if (responseObj.status === "200") {
-                    window.requestCounters.pending--;
-                    window.requestCounters.success++;
-                    updateCountersDisplay();
-                    showSuccessAlert();
+        .then(res => {
+            logEntry.responseStatus = res.status;
+            return res.text().then(text => {
+                logEntry.responseBody = text;
+                return { status: res.status, text };
+            });
+        })
+        .then(({ status, text }) => {
+            window.requestHistory.push(logEntry);
 
-                    // ✅ Stop if "Stop on Success" is checked
-                    if (document.getElementById("stop-on-success")?.checked) {
-                        stopAllRequests();
-                    }
-                } else {
-                    // Decrement pending, increment fail
-                    window.requestCounters.pending--;
-                    window.requestCounters.fail++;
-                    updateCountersDisplay();
+            const isSuccess = (() => {
+                try {
+                    const responseObj = JSON.parse(text);
+                    return responseObj.status === "200" || status === 200;
+                } catch {
+                    return false;
                 }
-            } catch (e) {
-                // Decrement pending, increment fail
-                window.requestCounters.pending--;
+            })();
+
+            if (isSuccess) {
+                window.requestCounters.success++;
+                showSuccessAlert();
+
+                // ✅ Record order number
+                const firstOrderCell = document.querySelector('table.table--data tbody tr td.text-center');
+                if (firstOrderCell) {
+                    const orderNumber = firstOrderCell.textContent.trim();
+                    if (orderNumber) {
+                        addOrderRecord(price, quantity, orderNumber);
+                        if (!window.successOrderNumbers.includes(orderNumber)) {
+                            window.successOrderNumbers.push(orderNumber);
+                        }
+                    }
+                }
+
+                // ✅ Check if need to stop on success
+                if (respectStopOnSuccess && document.getElementById("stop-on-success")?.checked) {
+                    stopRegularRequests(); // Not stopAllRequests, only regular
+                }
+
+            } else {
                 window.requestCounters.fail++;
-                updateCountersDisplay();
             }
+
+            window.requestCounters.pending--;
+            updateCountersDisplay();
+
+            if (typeof callback === "function") callback(isSuccess);
+
         })
         .catch(error => {
-            console.error("Request failed:", error);
-            // Decrement pending, increment fail
-            window.requestCounters.pending--;
+            logEntry.responseBody = `Request failed: ${error}`;
+            window.requestHistory.push(logEntry);
             window.requestCounters.fail++;
+            window.requestCounters.pending--;
             updateCountersDisplay();
+            if (typeof callback === "function") callback(false);
         });
 }
+
+function sendAllPrices(prices, batchName = "batch") {
+    console.log(`🚀 Sending ${prices.length} prices for batch: ${batchName}`);
+
+    const rawHeader = document.getElementById("inject-header").value;
+    const headers = parseHeaders(rawHeader);
+    const baseBody = document.getElementById("inject-body").value;
+    const quantity = parseInt(document.getElementById("quantity").value);
+    const symbol = parseInt(document.getElementById("symbol").value);
+
+    prices.forEach((price) => {
+        if (successPrices.includes(price)) return;
+
+        const payload = JSON.parse(baseBody);
+        if (payload.orderBook) {
+            payload.orderBook.orderBookExtensions?.forEach(ext => {
+                ext.orderPrice = price;
+                ext.orderQuantity = quantity;
+            });
+            if (payload.orderBook.security) {
+                payload.orderBook.security.id = symbol;
+            }
+        }
+
+        sendTradeRequest(headers, JSON.stringify(payload), price, quantity, (success) => {
+            if (success && !successPrices.includes(price)) {
+                successPrices.push(price);
+                allPrices = allPrices.filter(p => p !== price);
+                savePendingPrices();
+            }
+        }, false);
+    });
+}
+
+function retryUntilSuccess() {
+    const remaining = allPrices.filter(p => !successPrices.includes(p));
+    if (remaining.length === 0) {
+        console.log("✅ All prices placed successfully!");
+        document.getElementById("random-status").textContent = "✅ All requests completed!";
+        return;
+    }
+
+    console.log(`🔁 Retrying ${remaining.length} prices...`);
+    sendAllPrices(remaining, "retry");
+
+    if (keepRetrying) {
+        setTimeout(retryUntilSuccess, 1000);
+    }
+}
+
+
+
+
+
+
 
 function showSuccessAlert() {
     if (!document.getElementById("success-global-alert")) {
@@ -809,21 +1306,34 @@ function watchLTPPrice() {
     if (!target) return;
 
     const observer = new MutationObserver(() => {
-        const text = target.textContent.trim();
-        const match = text.match(/(\d+\.\d+)/);
-        if (match) {
-            const ltp = parseFloat(match[1]);
-            if (!isNaN(ltp)) {
-                const useLtp = document.getElementById("use-ltp-checkbox")?.checked;
+        // Get all text nodes within the target element
+        const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, null, false);
+        let textNodes = [];
+        let node;
+        while (node = walker.nextNode()) {
+            textNodes.push(node);
+        }
 
-                if (useLtp) {
-                    const raw = ltp + (ltp * 0.02);
-                    const truncated = Math.floor(raw * 10) / 10; // truncate to 1 decimal
-                    document.getElementById("ltp").value = ltp;
-                    document.getElementById("price").value = truncated;
-                    showLtpAlert();
-                    correctInjectFields();
-                }
+        // Find the main price text (the one that's not in a span and contains the number)
+        const priceText = textNodes.find(node => {
+            return node.parentNode === target &&
+                node.textContent.trim() &&
+                /\d/.test(node.textContent);
+        });
+
+        if (priceText) {
+            const rawText = priceText.textContent.trim();
+            // Remove commas and parse the number
+            const numberText = rawText.replace(/,/g, '');
+            const ltp = parseFloat(numberText);
+
+            if (!isNaN(ltp)) {
+                const raw = ltp + (ltp * 0.02);
+                const truncated = Math.floor(raw * 10) / 10; // truncate to 1 decimal
+                document.getElementById("ltp").value = ltp;
+                // document.getElementById("price").value = truncated;
+                showLtpAlert();
+                correctInjectFields();
             }
         }
     });
@@ -960,3 +1470,4 @@ function removeForm() {
         clearInterval(randomInterval);
     }
 }
+console.clear();

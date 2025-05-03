@@ -2,6 +2,22 @@ if (typeof window.formDiv === "undefined") {
     window.formDiv = null;
     window.interval = null;
     window.randomInterval = null;
+    window.requestHistory = [];
+    // Initialize requestCounters
+    window.requestCounters = {
+        success: 0,
+        fail: 0,
+        pending: 0
+    };
+}
+
+// Make sure we always have counters defined even if the above condition doesn't run
+if (typeof window.requestCounters === "undefined") {
+    window.requestCounters = {
+        success: 0,
+        fail: 0,
+        pending: 0
+    };
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -15,6 +31,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 function injectForm() {
+
     if (formDiv) return;
 
     formDiv = document.createElement("div");
@@ -22,16 +39,52 @@ function injectForm() {
 <style>
 #custom-injector {
   position: fixed;
-  top: 10px;
-  right: 10px;
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 999999;
   background: #fff;
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  width: 320px;
+  border-top: 1px solid #ccc;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+  width: 100%;
+  height: 496px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+#tab-navigation {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  background: #f5f5f5;
+}
+
+.tab-button {
+  padding: 12px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #555;
+  border-bottom: 3px solid transparent;
+}
+
+.tab-button.active {
+  border-bottom: 3px solid #007bff;
+  color: #007bff;
+  background: #fff;
+}
+
+.tab-content {
+  display: none;
+  padding: 15px;
+  height: calc(496px - 46px);
+  overflow-y: auto;
+}
+
+.tab-content.active {
+  display: block;
 }
 
 #custom-injector h4 {
@@ -130,6 +183,7 @@ function injectForm() {
   display: flex;
   gap: 6px;
   margin-top: 8px;
+  margin-bottom: 16px;
 }
 
 .section {
@@ -150,54 +204,214 @@ function injectForm() {
   margin-top: 5px;
   font-style: italic;
 }
+
+.button-group-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.current-order-info {
+  display: flex;
+  gap: 15px;
+  font-size: 13px;
+}
+
+.current-order-info span {
+  white-space: nowrap;
+}
+
+/* New counter styles */
+.request-counters {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+  gap: 20px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.counter-box {
+  padding: 15px 25px;
+  border-radius: 8px;
+  min-width: 120px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.counter-value {
+  font-size: 26px;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+.counter-success {
+  background-color: #e6f7ed;
+  border: 1px solid #28a745;
+  color: #28a745;
+}
+
+.counter-fail {
+  background-color: #fbeae5;
+  border: 1px solid #dc3545;
+  color: #dc3545;
+}
+
+.counter-pending {
+  background-color: #e8f4ff;
+  border: 1px solid #007bff;
+  color: #007bff;
+}
+
+/* Success alert */
+#success-global-alert {
+  display: none;
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 255, 61, 0.39);
+  color: rgb(21, 87, 36);
+  border: 1px solid rgb(195, 230, 203);
+  padding: 56px 157px;
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 14px;
+  z-index: 9999999;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* Reset button */
+.reset-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 15px;
+  align-self: center;
+}
+
+.reset-button:hover {
+  background-color: #5a6268;
+}
+.box-order-entry.blur__options{
+    filter:unset !important;
+}
+.d-flex{
+display: flex;
+}
+.d-flex > .col{
+width:50%;
+}
 </style>
 
 <div id="custom-injector">
-  <div class="section">
+  <div id="tab-navigation">
+    <button class="tab-button active" data-tab="calculation">Calculation</button>
+    <button class="tab-button" data-tab="order">Order</button>
+    <button class="tab-button" data-tab="request">Request and Response</button>
+  </div>
+  
+  <div id="calculation-tab" class="tab-content active">
     <h4>Price Calculation</h4>
     <label>First Price<input type="number" id="initial_price" placeholder="First Price"></label>
     <button id="calculate">Calculate</button>
     <div id="calc-output"></div>
   </div>
-
-  <div class="section">
-    <h4>Order Parameters</h4>
-     <label>LTP<input type="number" id="ltp" placeholder="LTP"></label>
-    <label>Symbol: <input type="number" id="symbol" placeholder="Symbol ID"></label>
-    <label>Price: <input type="number" id="price" step="0.1" placeholder="Price"></label>
-    <label>Quantity: <input type="number" id="quantity" placeholder="Quantity"></label>
-    
-    <label style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
-      <input type="checkbox" id="use-ltp-checkbox" checked />
-      Use LTP + 2%
-      <button id="correct-fields" type="button">Update Payload</button>
-    </label>
+  
+  <div id="order-tab" class="tab-content">
+    <div class="two-column">
+      <div class="column">
+        <div class="section">
+          <h4>Order Parameters</h4>
+          <label>LTP<input type="number" id="ltp" placeholder="LTP"></label>
+          <label>Symbol: <input type="number" id="symbol" placeholder="Symbol ID"></label>
+          <label>Price: <input type="number" id="price" step="0.1" placeholder="Price"></label>
+          <label>Quantity: <input type="number" id="quantity" placeholder="Quantity"></label>
+          
+          <label style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <input type="checkbox" id="use-ltp-checkbox" checked />
+            Use LTP + 2%
+            <button id="correct-fields" type="button">Update Payload</button>
+          </label>
+        </div>
+      </div>
+      
+      <div class="column">
+        <div class="section">
+          <h4>Request Configuration</h4>
+          <div class="d-flex">
+          <div class="col">
+           <label>Headers:</label>
+          <textarea id="inject-header" rows="3"></textarea>
+          <button id="format-header" type="button">Format Header</button>
+</div>
+<div class="col">
+ <label>Payload:</label>
+          <textarea id="inject-body" rows="5"></textarea>
+</div>
+</div>
+          
+         
+          
+         
+        </div>
+      </div>
+    </div>
   </div>
   
-  <div class="section">
-    <h4>Request Configuration</h4>
-    <label>Headers:</label>
-    <textarea id="inject-header" rows="3"></textarea>
-    <button id="format-header" type="button">Format Header</button>
-    <label>Requests per second: <input type="number" id="per_sec_request" placeholder="Requests/sec" value="1"></label>
-    <label>Payload:</label>
-    <textarea id="inject-body" rows="5"></textarea>
+  <div id="request-tab" class="tab-content">
+   <div class="button-group-wrapper">
+  <div class="button-group">
+    <button id="inject-start">Start</button>
+    <button id="inject-stop" class="danger">Stop</button>
+    <button id="start-random" class="success">Start Random</button>
+    <button id="stop-random" class="danger">Stop Random</button>
     
-    <div class="button-group">
-      <button id="inject-start">Start</button>
-      <button id="inject-stop" class="danger">Stop</button>
-    </div>
+    <label style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <input type="checkbox" id="stop-on-success" checked />
+            Stop on success
+            <button id="correct-fields" type="button">Update Payload</button>
+          </label>
     
-    <div class="button-group">
-      <button id="start-random" class="success">Start Random</button>
-      <button id="stop-random" class="danger">Stop Random</button>
+    <span id="random-status"></span>
+  </div>
+  <div>
+  <label>Requests per second: <input type="number" id="per_sec_request" placeholder="Requests/sec" value="1"></label>
+</div>
+  <div class="current-order-info">
+    <span><strong>Symbol:</strong> <span id="display-symbol">-</span></span>
+    <span><strong>Quantity:</strong> <span id="display-quantity">-</span></span>
+    <span><strong>Price:</strong> <span id="display-price">-</span></span>
+  </div>
+</div>
+    
+    <!-- Replace table with counters -->
+    <div class="request-counters">
+      <div class="counter-box counter-success">
+        <div>SUCCESS</div>
+        <div class="counter-value" id="success-counter">0</div>
+      </div>
+      <div class="counter-box counter-fail">
+        <div>FAILED</div>
+        <div class="counter-value" id="fail-counter">0</div>
+      </div>
+      <div class="counter-box counter-pending">
+        <div>PENDING</div>
+        <div class="counter-value" id="pending-counter">0</div>
+      </div>
     </div>
-    <div id="random-status"></div>
+    <button id="reset-counters" class="reset-button">Reset Counters</button>
   </div>
 </div>
 `;
 
     document.body.appendChild(formDiv);
+
+    // Setup tab navigation
+    setupTabs();
 
     // Initialize features
     watchLTPPrice();
@@ -207,6 +421,9 @@ function injectForm() {
     // Set up state persistence
     restoreFormState();
     persistFormState();
+
+    // Initialize counter display
+    updateCountersDisplay();
 
     document.getElementById("ltp").addEventListener("input", () => {
         const ltpVal = parseFloat(document.getElementById("ltp").value);
@@ -245,7 +462,100 @@ function injectForm() {
         document.getElementById("inject-header").value = output.join("\n");
     });
 
+    // Add reset counters button handler
+    document.getElementById("reset-counters").addEventListener("click", resetCounters);
 
+    // Auto-format header on paste or input
+    document.getElementById("inject-header").addEventListener("input", () => {
+        const input = document.getElementById("inject-header").value;
+        const lines = input.split(/\r?\n/);
+        const output = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+
+            if (!line) continue;
+
+            // Handle ":key\nvalue" pattern
+            if (line.endsWith(":")) {
+                const key = line.slice(0, -1).trim();
+                const value = (lines[i + 1] || "").trim();
+                output.push(`${key}: ${value}`);
+                i++;
+            } else if (!line.includes(":")) {
+                const key = line;
+                const value = (lines[i + 1] || "").trim();
+                output.push(`${key}: ${value}`);
+                i++;
+            } else {
+                output.push(line);
+            }
+        }
+
+        document.getElementById("inject-header").value = output.join("\n");
+    });
+
+    ["symbol", "price", "quantity"].forEach(id => {
+        const input = document.getElementById(id);
+        input.addEventListener("input", () => {
+            correctInjectFields();
+        });
+    });
+
+
+}
+
+function resetCounters() {
+    // Ensure requestCounters exists
+    if (!window.requestCounters) {
+        window.requestCounters = {
+            success: 0,
+            fail: 0,
+            pending: 0
+        };
+    } else {
+        window.requestCounters.success = 0;
+        window.requestCounters.fail = 0;
+        window.requestCounters.pending = 0;
+    }
+    updateCountersDisplay();
+}
+
+function updateCountersDisplay() {
+    // Ensure requestCounters exists
+    if (!window.requestCounters) {
+        window.requestCounters = {
+            success: 0,
+            fail: 0,
+            pending: 0
+        };
+    }
+
+    // Update the DOM elements
+    document.getElementById("success-counter").textContent = window.requestCounters.success;
+    document.getElementById("fail-counter").textContent = window.requestCounters.fail;
+    document.getElementById("pending-counter").textContent = window.requestCounters.pending;
+}
+
+function setupTabs() {
+    const tabButtons = document.querySelectorAll('.tab-button');
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove active class from all buttons and content
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Add active class to clicked button and corresponding content
+            button.classList.add('active');
+            const tabId = button.getAttribute('data-tab');
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+        });
+    });
 }
 
 function setupCalculationButton() {
@@ -287,6 +597,8 @@ function setupCalculationButton() {
             btn.onclick = () => {
                 document.getElementById("price").value = btn.dataset.value;
                 correctInjectFields(); // Auto update payload with new price
+                // Switch to the Order tab
+                document.querySelector('.tab-button[data-tab="order"]').click();
             };
         });
     };
@@ -312,11 +624,14 @@ function startRegularRequests() {
     const body = document.getElementById("inject-body").value;
     const headers = parseHeaders(rawHeader);
 
+    const price = parseFloat(document.getElementById("price").value);
+    const quantity = parseInt(document.getElementById("quantity").value);
+
     const perSec = parseInt(document.getElementById("per_sec_request")?.value || "1");
     const delay = perSec > 0 ? Math.floor(1000 / perSec) : 1000;
 
     interval = setInterval(() => {
-        sendTradeRequest(headers, body);
+        sendTradeRequest(headers, body, price, quantity);
     }, delay);
 }
 
@@ -341,6 +656,8 @@ function startRandomPriceRequests() {
 
     const rawHeader = document.getElementById("inject-header").value;
     const headers = parseHeaders(rawHeader);
+    // Force Content-Type to application/json
+    headers["Content-Type"] = "application/json";
     const baseBody = document.getElementById("inject-body").value;
 
     try {
@@ -371,7 +688,7 @@ function startRandomPriceRequests() {
                     }
                 }
 
-                sendTradeRequest(headers, JSON.stringify(payload));
+                sendTradeRequest(headers, JSON.stringify(payload), price, quantity);
             });
         }, 1000);
 
@@ -381,18 +698,6 @@ function startRandomPriceRequests() {
         statusDiv.textContent = "❌ Invalid payload format";
     }
 }
-
-
-
-// Fisher-Yates shuffle
-function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-}
-
 
 function stopRandomPriceRequests() {
     clearInterval(randomInterval);
@@ -405,7 +710,24 @@ function stopAllRequests() {
     stopRandomPriceRequests();
 }
 
-function sendTradeRequest(headers, body) {
+function sendTradeRequest(headers, body, price, quantity) {
+    // Ensure requestCounters exists
+    if (!window.requestCounters) {
+        window.requestCounters = {
+            success: 0,
+            fail: 0,
+            pending: 0
+        };
+    }
+
+    // Add entry to request history with pending status
+    const requestId = Date.now().toString();
+
+    // Increment pending counter
+    window.requestCounters.pending++;
+    updateCountersDisplay();
+    console.log(headers);
+
     fetch("https://tms44.nepsetms.com.np/tmsapi/orderApi/order/", {
         method: "POST",
         headers,
@@ -415,10 +737,71 @@ function sendTradeRequest(headers, body) {
         .then(res => res.text())
         .then(response => {
             console.log("Request success:", response);
+            try {
+                const responseObj = JSON.parse(response);
+                if (responseObj.status === "200") {
+                    window.requestCounters.pending--;
+                    window.requestCounters.success++;
+                    updateCountersDisplay();
+                    showSuccessAlert();
+
+                    // ✅ Stop if "Stop on Success" is checked
+                    if (document.getElementById("stop-on-success")?.checked) {
+                        stopAllRequests();
+                    }
+                } else {
+                    // Decrement pending, increment fail
+                    window.requestCounters.pending--;
+                    window.requestCounters.fail++;
+                    updateCountersDisplay();
+                }
+            } catch (e) {
+                // Decrement pending, increment fail
+                window.requestCounters.pending--;
+                window.requestCounters.fail++;
+                updateCountersDisplay();
+            }
         })
         .catch(error => {
             console.error("Request failed:", error);
+            // Decrement pending, increment fail
+            window.requestCounters.pending--;
+            window.requestCounters.fail++;
+            updateCountersDisplay();
         });
+}
+
+function showSuccessAlert() {
+    if (!document.getElementById("success-global-alert")) {
+        const alertBox = document.createElement("div");
+        alertBox.id = "success-global-alert";
+        alertBox.style = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(0, 255, 61, 0.39);
+        color: rgb(21, 87, 36);
+        border: 1px solid rgb(195, 230, 203);
+        padding: 56px 157px;
+        border-radius: 5px;
+        font-weight: bold;
+        font-size: 14px;
+        z-index: 9999999;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        `;
+        alertBox.textContent = "Order Success!";
+        document.body.appendChild(alertBox);
+    }
+
+    const alert = document.getElementById("success-global-alert");
+    if (!alert) return;
+    alert.style.display = "block";
+
+    clearTimeout(window.successAlertTimeout);
+    window.successAlertTimeout = setTimeout(() => {
+        alert.style.display = "none";
+    }, 5000);
 }
 
 function watchLTPPrice() {
@@ -445,7 +828,7 @@ function watchLTPPrice() {
         }
     });
 
-    observer.observe(target, { childList: true, subtree: true, characterData: true });
+    observer.observe(target, {childList: true, subtree: true, characterData: true});
 }
 
 function showLtpAlert() {
@@ -488,6 +871,11 @@ function correctInjectFields() {
     const quantity = parseInt(document.getElementById("quantity")?.value || 0);
     const textarea = document.getElementById("inject-body");
 
+    // Update displayed info in request tab
+    document.getElementById("display-symbol").textContent = symbol_id;
+    document.getElementById("display-quantity").textContent = quantity;
+    document.getElementById("display-price").textContent = price;
+
     if (!textarea || isNaN(price) || isNaN(quantity) || isNaN(symbol_id)) {
         return alert("Invalid price, quantity, or symbol ID");
     }
@@ -509,13 +897,14 @@ function correctInjectFields() {
             }
         }
 
-        // Set updated JSON
-        textarea.value = JSON.stringify(payload, null, 2);
+        // Set updated and minified JSON
+        textarea.value = JSON.stringify(payload); // minified, no spacing
     } catch (e) {
         console.error("Error updating payload:", e);
         alert("Error: Invalid JSON format in payload");
     }
 }
+
 
 function persistFormState() {
     const elements = formDiv.querySelectorAll("input, textarea");
