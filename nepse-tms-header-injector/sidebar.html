@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 10px;
+            padding: 0;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .instructions {
+            margin-bottom: 15px;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #555;
+        }
+
+        .instructions ol {
+            padding-left: 20px;
+            margin: 8px 0;
+        }
+
+        .instructions li {
+            margin-bottom: 6px;
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        button {
+            background-color: #4285f4;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 0;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #3367d6;
+        }
+
+        button:active {
+            background-color: #2a56c6;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            color: #666666;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin-top: 12px;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: #d4edda;
+            color: #155724;
+            display: none;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .dark-theme {
+            color: #e8eaed;
+            background-color: #202124;
+        }
+
+        .dark-theme .instructions {
+            color: #9aa0a6;
+        }
+
+        .dark-theme #status {
+            background-color: #0f5132;
+            color: #d1e7dd;
+        }
+    </style>
+</head>
+<body>
+<div class="title">Network Headers Copier</div>
+
+<div class="instructions">
+    <ol>
+        <li>Select a network request in the Network panel</li>
+        <li>Click "Copy All Request Headers" to copy headers from the selected request</li>
+        <li>Or click "Copy NEPSE TMS Headers" to find and copy headers from the NEPSE TMS API automatically</li>
+    </ol>
+</div>
+
+<div class="button-container">
+    <button id="copyAllHeaders">Copy All Request Headers</button>
+    <button id="copyNepseHeaders">Copy NEPSE TMS Headers</button>
+</div>
+
+<div id="status">Headers copied to clipboard!</div>
+
+<script src="sidebar.js"></script>
+<script>
+    // Check for dark theme
+    function checkTheme() {
+        const isDarkTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (isDarkTheme) {
+            document.body.classList.add('dark-theme');
+        }
+    }
+
+    // Check theme on load
+    checkTheme();
+
+    // Listen for theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', checkTheme);
+</script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NEPSE TMS Header Injector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            width: 320px;
+            padding: 10px;
+        }
+        h2 {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        button {
+            padding: 8px 12px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #3367d6;
+        }
+        .header-select {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        select {
+            flex-grow: 1;
+            padding: 5px;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .headers-preview {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<h2>NEPSE TMS Header Injector</h2>
+<div class="container">
+    <div class="header-select">
+        <label for="header-index">Select request:</label>
+        <select id="header-index">
+            <option value="0">Most recent request</option>
+            <option value="1">Second most recent</option>
+            <option value="2">Third most recent</option>
+        </select>
+    </div>
+
+    <button id="view-headers">View Headers</button>
+    <button id="inject-button">Inject Headers to #inject-header</button>
+
+    <div id="headers-preview" class="headers-preview"></div>
+    <div id="status" class="status"></div>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>

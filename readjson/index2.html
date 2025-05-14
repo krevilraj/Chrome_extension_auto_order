@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Request History Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f9f9f9;
+        }
+        h1 {
+            text-align: center;
+        }
+        #fileInput {
+            margin-bottom: 20px;
+            display: block;
+        }
+        .accordion {
+            cursor: pointer;
+            padding: 14px 20px;
+            margin-bottom: 10px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 16px;
+            transition: 0.3s;
+            border-radius: 5px;
+            color: white;
+        }
+        .accordion.success {
+            background-color: #28a745; /* Green */
+        }
+        .accordion.fail {
+            background-color: #dc3545; /* Red */
+        }
+        .accordion:hover {
+            filter: brightness(0.9);
+        }
+        .panel {
+            padding: 0 20px;
+            background-color: white;
+            display: none;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            overflow-x: auto;
+            border-radius: 4px;
+        }
+        .success-text {
+            color: green;
+            font-weight: bold;
+        }
+        .fail-text {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Request History Viewer</h1>
+
+<input type="file" id="fileInput" accept=".json" />
+
+<div id="accordionContainer"></div>
+
+<script>
+    let allData = [];
+
+    document.getElementById('fileInput').addEventListener('change', function (event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                allData = JSON.parse(e.target.result);
+                const successPairs = getSuccessPairs(allData);
+                renderRadioButtons(successPairs);
+                if (successPairs.length > 0) {
+                    renderRange(successPairs[0]); // Show first pair by default
+                }
+            } catch (error) {
+                alert('Invalid JSON file!');
+                console.error(error);
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    function getSuccessPairs(data) {
+        const successIndexes = data
+            .map((entry, i) => ({ index: i, status: entry.responseStatus }))
+            .filter(entry => entry.status == 200)
+            .map(entry => entry.index);
+
+        const pairs = [];
+        for (let i = 0; i < successIndexes.length - 1; i += 2) {
+            pairs.push([successIndexes[i], successIndexes[i + 1]]);
+        }
+        return pairs;
+    }
+
+    function renderRadioButtons(pairs) {
+        const container = document.getElementById('accordionContainer');
+        container.innerHTML = '';
+
+        const radioWrapper = document.createElement('div');
+        radioWrapper.style.marginBottom = '20px';
+
+        pairs.forEach((pair, i) => {
+            const label = document.createElement('label');
+            label.style.marginRight = '20px';
+
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'successPair';
+            radio.value = i;
+            if (i === 0) radio.checked = true;
+
+            radio.addEventListener('change', () => {
+                renderRange(pairs[i]);
+            });
+
+            label.appendChild(radio);
+            label.appendChild(document.createTextNode(`Success ${i * 2 + 1}-${i * 2 + 2}`));
+            radioWrapper.appendChild(label);
+        });
+
+        container.appendChild(radioWrapper);
+    }
+
+    function renderRange(pair) {
+        const container = document.getElementById('accordionContainer');
+
+        // Remove existing accordion buttons but keep the radio buttons
+        const radios = container.querySelector('div');
+        container.innerHTML = '';
+        container.appendChild(radios);
+
+        const [startIdx, endIdx] = pair;
+        const firstSuccess = allData[startIdx];
+        const secondSuccess = allData[endIdx];
+        const between = allData.slice(startIdx + 1, endIdx);
+
+        const entries = [firstSuccess, ...between, secondSuccess];
+        renderAccordion(entries, container);
+    }
+
+    function renderAccordion(data, container) {
+        data.forEach((entry, index) => {
+            const isSuccess = entry.responseStatus == 200 || entry.responseStatus == "200";
+            const acc = document.createElement('button');
+            acc.className = 'accordion ' + (isSuccess ? 'success' : 'fail');
+            acc.innerHTML = `#${index + 1} | ${entry.timestamp || 'Unknown Time'}`;
+
+            const panel = document.createElement('div');
+            panel.className = 'panel';
+
+            panel.innerHTML = `
+        <h4>Request Headers:</h4>
+        <pre>${JSON.stringify(entry.requestHeaders, null, 2)}</pre>
+        <h4>Request Body:</h4>
+        <pre>${formatJsonOrRaw(entry.requestBody)}</pre>
+        <h4>Response Status: <span class="${isSuccess ? 'success-text' : 'fail-text'}">${entry.responseStatus || 'N/A'}</span></h4>
+        <h4>Response Body:</h4>
+        <pre>${formatJsonOrRaw(entry.responseBody)}</pre>
+      `;
+
+            acc.addEventListener('click', function () {
+                this.classList.toggle('active');
+                panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+            });
+
+            container.appendChild(acc);
+            container.appendChild(panel);
+        });
+    }
+
+    function formatJsonOrRaw(text) {
+        try {
+            const obj = JSON.parse(text);
+            return JSON.stringify(obj, null, 2);
+        } catch (e) {
+            return text || "";
+        }
+    }
+</script>
+
+
+
+
+
+</body>
+</html>

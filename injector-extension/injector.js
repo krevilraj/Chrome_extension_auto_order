@@ -1,47 +1,45 @@
-let allPrices = [];
-let successPrices = [];
-let keepRetrying = true;
+// Wrap entire script in initialization check
+if (typeof window.injectorLoaded === 'undefined') {
+    window.injectorLoaded = true;
 
-if (typeof window.formDiv === "undefined") {
-    window.formDiv = null;
-    window.interval = null;
-    window.randomInterval = null;
-    window.requestHistory = [];
-    // Initialize requestCounters
-    window.requestCounters = {
-        success: 0,
-        fail: 0,
-        pending: 0
-    };
-    window.successOrderNumbers = []; // ✅ new array to save success first row Order numbers
-
-}
-
-// Make sure we always have counters defined even if the above condition doesn't run
-if (typeof window.requestCounters === "undefined") {
-    window.requestCounters = {
-        success: 0,
-        fail: 0,
-        pending: 0
-    };
-}
-
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    if (msg.type === "toggle_form") {
-        if (msg.show) {
-            injectForm();
-        } else {
-            removeForm();
-        }
+    // Your original code starts here (paste ALL your original code below)
+    let allPrices = [];
+    let successPrices = [];
+    let keepRetrying = true;
+    let successCount = 0;
+    // Define how many successes are required
+    const REQUIRED_SUCCESS_COUNT = 2;
+    if (typeof window.formDiv === "undefined") {
+        window.formDiv = null;
+        window.interval = null;
+        window.randomInterval = null;
+        window.requestHistory = [];
+        window.requestCounters = {
+            success: 0,
+            fail: 0,
+            pending: 0
+        };
+        window.successOrderNumbers = [];
     }
-});
 
-function injectForm() {
 
-    if (formDiv) return;
 
-    formDiv = document.createElement("div");
-    formDiv.innerHTML = `
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+        if (msg.type === "toggle_form") {
+            if (msg.show) {
+                injectForm();
+            } else {
+                removeForm();
+            }
+        }
+    });
+
+    function injectForm() {
+
+        if (formDiv) return;
+
+        formDiv = document.createElement("div");
+        formDiv.innerHTML = `
 <style>
 #custom-injector {
   position: fixed;
@@ -341,11 +339,19 @@ button[data-quantity].active {
     background:#007bff;
     color:#fff
 }
+.highlight-green {
+  background-color: #4CAF50 !important;
+  color: white !important;
+  font-weight: bold;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  transform: scale(1.05);
+  transition: all 0.3s ease;
+}
 </style>
 
 <div id="custom-injector">
   <div id="tab-navigation">
-    <button class="tab-button active" data-tab="calculation">Calculation</button>
+    <button class="tab-button active" data-tab="calculation">First Task</button>
     <button class="tab-button" data-tab="order">Order</button>
     <button class="tab-button" data-tab="request">Request and Response</button>
     <button class="tab-button" data-tab="placed">Order Complete</button>
@@ -353,10 +359,7 @@ button[data-quantity].active {
   </div>
   
   <div id="calculation-tab" class="tab-content active">
-    <h4>Price Calculation</h4>
-    <label>First Price<input type="number" id="initial_price" placeholder="First Price"></label>
-    <button id="calculate">Calculate</button>
-    <div id="calc-output"></div>
+    
   </div>
   
   <div id="order-tab" class="tab-content">
@@ -377,6 +380,16 @@ button[data-quantity].active {
           <textarea id="inject-body" rows="5"></textarea>
 </div>
 </div>
+
+
+
+<label>Headers:</label>
+          <textarea id="inject-header1" rows="3"></textarea>
+          
+          <button id="format-header1" type="button">Format Header</button>
+<h4>Get all the information</h4>
+    <label>Symbol id<input type="number" id="symbol__id" placeholder="First Price"></label>
+    <button id="get__it">Get it</button>
           
          
           
@@ -398,6 +411,7 @@ button[data-quantity].active {
             <input type="checkbox" id="stop-on-success" checked />
             Stop on success
           </label>
+          
     
     <span id="random-status"></span>
   </div>
@@ -475,9 +489,10 @@ button[data-quantity].active {
 
 
 </div>
+
+
     
-    
-    <button id="reset-counters" class="reset-button">Reset Counters</button>
+    <button id="delete-pending-prices" class="reset-button danger">Delete All Pending Prices</button>
     <button id="download-logs" class="reset-button">Download Logs</button>
     <button id="first-order-btn" class="reset-button">First Order</button>
 
@@ -503,764 +518,997 @@ button[data-quantity].active {
 </div>
 `;
 
-    document.body.appendChild(formDiv);
+        document.body.appendChild(formDiv);
 
-    // Setup tab navigation
-    setupTabs();
+        // Setup tab navigation
+        setupTabs();
 
-    // Initialize features
-    watchLTPPrice();
-    setupCalculationButton();
-    setupButtonHandlers();
+        // Initialize features
+        watchLTPPrice();
+        //setupCalculationButton();
+        setupButtonHandlers();
 
-    // Set up state persistence
-    restoreFormState();
-    persistFormState();
-
-    document.getElementById("download-logs").addEventListener("click", () => {
-        if (!window.requestHistory || window.requestHistory.length === 0) {
-            alert("No request history to download.");
-            return;
-        }
-
-        const blob = new Blob([JSON.stringify(window.requestHistory, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "request_history.json";
-        a.click();
-        URL.revokeObjectURL(url);
-    });
+        // Set up state persistence
+        restoreFormState();
+        persistFormState();
 
 
 
-    // Initialize counter display
-    updateCountersDisplay();
+        document.getElementById("download-logs").addEventListener("click", () => {
+            if (!window.requestHistory || window.requestHistory.length === 0) {
+                alert("No request history to download.");
+                return;
+            }
 
-    document.getElementById("ltp").addEventListener("input", () => {
-        const ltpVal = parseFloat(document.getElementById("ltp").value);
-        if (!isNaN(ltpVal)) {
-            document.getElementById("price").value = Math.floor((ltpVal + ltpVal * 0.02) * 10) / 10;
-            correctInjectFields();
-        }
-    });
+            const blob = new Blob([JSON.stringify(window.requestHistory, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "request_history.json";
+            a.click();
+            URL.revokeObjectURL(url);
+        });
 
-    document.getElementById("format-header").addEventListener("click", () => {
-        const input = document.getElementById("inject-header").value;
-        const lines = input.split(/\r?\n/);
-        const output = [];
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
 
-            if (!line) continue;
+        // Initialize counter display
+        updateCountersDisplay();
 
-            // Handle ":key\nvalue" pattern
-            if (line.endsWith(":")) {
-                const key = line.slice(0, -1).trim();
-                const value = (lines[i + 1] || "").trim();
-                output.push(`${key}: ${value}`);
-                i++;
-            } else if (!line.includes(":")) {
-                const key = line;
-                const value = (lines[i + 1] || "").trim();
-                output.push(`${key}: ${value}`);
-                i++;
-            } else {
-                output.push(line);
+        document.getElementById("ltp").addEventListener("input", () => {
+            const ltpVal = parseFloat(document.getElementById("ltp").value);
+            if (!isNaN(ltpVal)) {
+                document.getElementById("price").value = Math.floor((ltpVal + ltpVal * 0.02) * 10) / 10;
+                correctInjectFields();
+            }
+        });
+
+        // document.getElementById("format-header").addEventListener("click", () => {
+        //     const input = document.getElementById("inject-header").value;
+        //     const lines = input.split(/\r?\n/);
+        //     const output = [];
+        //
+        //     for (let i = 0; i < lines.length; i++) {
+        //         const line = lines[i].trim();
+        //
+        //         if (!line) continue;
+        //
+        //         // Handle ":key\nvalue" pattern
+        //         if (line.endsWith(":")) {
+        //             const key = line.slice(0, -1).trim();
+        //             const value = (lines[i + 1] || "").trim();
+        //             output.push(`${key}: ${value}`);
+        //             i++;
+        //         } else if (!line.includes(":")) {
+        //             const key = line;
+        //             const value = (lines[i + 1] || "").trim();
+        //             output.push(`${key}: ${value}`);
+        //             i++;
+        //         } else {
+        //             output.push(line);
+        //         }
+        //     }
+        //
+        //     document.getElementById("inject-header").value = output.join("\n");
+        // });
+
+        // 1. Format button for inject-header1
+        document.getElementById("format-header").addEventListener("click", () => {
+            formatHeaders("inject-header");
+        });
+
+        // 1. Format button for inject-header1
+        document.getElementById("format-header1").addEventListener("click", () => {
+            formatHeaders("inject-header1");
+        });
+
+        // Add reset counters button handler
+        // document.getElementById("reset-counters").addEventListener("click", resetCounters);
+
+        // 2. Auto-format for inject-header (with anti-recursion protection)
+        let isProgrammaticChange = false;
+        document.getElementById("inject-header").addEventListener("input", function() {
+            if (isProgrammaticChange) {
+                isProgrammaticChange = false;
+                return;
+            }
+            formatHeaders("inject-header");
+        });
+
+        let isProgrammaticChange1 = false;
+        document.getElementById("inject-header1").addEventListener("input", function() {
+            if (isProgrammaticChange1) {
+                isProgrammaticChange1 = false;
+                return;
+            }
+            formatHeaders("inject-header1");
+        });
+
+// Shared formatting function
+        function formatHeaders(textareaId) {
+            const textarea = document.getElementById(textareaId);
+            const input = textarea.value;
+            const lines = input.split(/\r?\n/);
+            const output = [];
+            let i = 0;
+
+            while (i < lines.length) {
+                let line = lines[i].trim();
+
+                if (!line) {
+                    i++;
+                    continue;
+                }
+
+                // Handle HTTP/2 pseudo-headers (starting with :)
+                if (line.startsWith(":")) {
+                    const key = line;
+                    const value = (lines[i + 1] || "").trim();
+                    output.push(`${key} ${value}`);
+                    i += 2;
+                }
+                // Handle already formatted headers
+                else if (line.includes(":")) {
+                    output.push(line);
+                    i++;
+                }
+                // Handle unformatted key-value pairs
+                else {
+                    const key = line;
+                    const value = (lines[i + 1] || "").trim();
+                    output.push(`${key}: ${value}`);
+                    i += 2;
+                }
+            }
+
+            const newValue = output.join("\n");
+            if (textarea.value !== newValue) {
+                isProgrammaticChange = true;
+                textarea.value = newValue;
+            }
+
+            // Update content length if function exists
+            if (typeof updateContentLengthInHeader === 'function') {
+                updateContentLengthInHeader();
             }
         }
 
-        document.getElementById("inject-header").value = output.join("\n");
-    });
 
-    // Add reset counters button handler
-    document.getElementById("reset-counters").addEventListener("click", resetCounters);
+        ["symbol", "price", "quantity"].forEach(id => {
+            const input = document.getElementById(id);
+            input.addEventListener("input", () => {
+                correctInjectFields();
+            });
+        });
 
-    // Auto-format header on paste or input
-    document.getElementById("inject-header").addEventListener("input", () => {
-        const input = document.getElementById("inject-header").value;
-        const lines = input.split(/\r?\n/);
-        const output = [];
+        document.getElementById("inject-body").addEventListener("input", updateContentLengthInHeader);
 
-        let overrides = {
-            ":method": "POST",
-            ":path": "/tmsapi/orderApi/order/",
-            ":scheme": "https",
-            "content-type": "application/json"
-        };
+        // ✅ Handle Price Table Row Insertion
+        const percentSeedInput = document.getElementById("percent-seed");
+        const addRowBtn = document.getElementById("add-percent-row");
+        const priceTableBody = document.querySelector("#price-table tbody");
 
-        for (let i = 0; i < lines.length; i++) {
-            let line = lines[i].trim();
-            if (!line) continue;
-
-            if (line.endsWith(":")) {
-                const key = line.slice(0, -1).trim();
-                const value = (lines[i + 1] || "").trim();
-                i++;
-                output.push(`${key}: ${value}`);
-            } else if (!line.includes(":")) {
-                const key = line;
-                const value = (lines[i + 1] || "").trim();
-                i++;
-                output.push(`${key}: ${value}`);
-            } else {
-                output.push(line);
+        addRowBtn.addEventListener("click", () => {
+            const base = parseFloat(percentSeedInput.value);
+            if (isNaN(base)) {
+                alert("Enter a valid number");
+                return;
             }
-        }
 
-        // Apply overrides
-        const parsed = {};
-        output.forEach(line => {
-            const [key, ...rest] = line.split(":");
-            parsed[key.trim()] = rest.join(":").trim();
-        });
+            const row = document.createElement("tr");
+            const percentages = [2, 2, 2, 2, 2]; // 5 times +2%
+            let current = base;
 
-        Object.entries(overrides).forEach(([k, v]) => {
-            parsed[k] = v;
-        });
+            function truncate1Decimal(val) {
+                return Math.floor(val * 10) / 10;
+            }
 
-        // Rebuild headers
-        const finalHeader = Object.entries(parsed)
-            .map(([k, v]) => `${k}: ${v}`)
-            .join("\n");
+            // First column - base
+            const baseCell = document.createElement("td");
+            const baseTruncated = truncate1Decimal(base);
+            baseCell.textContent = baseTruncated.toFixed(1);
+            baseCell.style.cursor = "pointer";
+            baseCell.onclick = () => {
+                document.getElementById("price").value = baseTruncated;
+                correctInjectFields();
+            };
+            row.appendChild(baseCell);
 
-        document.getElementById("inject-header").value = finalHeader;
+            // Now 5 times +2%
+            percentages.forEach(percent => {
+                const plus = current * (percent / 100);
+                const next = current + plus;
+                const truncated = truncate1Decimal(next);
 
-        updateContentLengthInHeader();
-    });
+                const td = document.createElement("td");
+                td.textContent = truncated.toFixed(1);
+                td.style.cursor = "pointer";
+                td.onclick = () => {
+                    document.getElementById("price").value = truncated;
+                    correctInjectFields();
+                };
+                row.appendChild(td);
 
+                current = truncated; // IMPORTANT: next step from here
+            });
 
-    ["symbol", "price", "quantity"].forEach(id => {
-        const input = document.getElementById(id);
-        input.addEventListener("input", () => {
-            correctInjectFields();
-        });
-    });
-
-    document.getElementById("inject-body").addEventListener("input", updateContentLengthInHeader);
-
-    // ✅ Handle Price Table Row Insertion
-    const percentSeedInput = document.getElementById("percent-seed");
-    const addRowBtn = document.getElementById("add-percent-row");
-    const priceTableBody = document.querySelector("#price-table tbody");
-
-    addRowBtn.addEventListener("click", () => {
-        const base = parseFloat(percentSeedInput.value);
-        if (isNaN(base)) {
-            alert("Enter a valid number");
-            return;
-        }
-
-        const row = document.createElement("tr");
-        const percentages = [2, 2, 2, 2, 2]; // 5 times +2%
-        let current = base;
-
-        function truncate1Decimal(val) {
-            return Math.floor(val * 10) / 10;
-        }
-
-        // First column - base
-        const baseCell = document.createElement("td");
-        const baseTruncated = truncate1Decimal(base);
-        baseCell.textContent = baseTruncated.toFixed(1);
-        baseCell.style.cursor = "pointer";
-        baseCell.onclick = () => {
-            document.getElementById("price").value = baseTruncated;
-            correctInjectFields();
-        };
-        row.appendChild(baseCell);
-
-        // Now 5 times +2%
-        percentages.forEach(percent => {
-            const plus = current * (percent / 100);
-            const next = current + plus;
-            const truncated = truncate1Decimal(next);
+            // Last: +10% of BASE
+            const finalPlus = base * 0.10;
+            const finalValue = base + finalPlus;
+            const finalTruncated = truncate1Decimal(finalValue);
 
             const td = document.createElement("td");
-            td.textContent = truncated.toFixed(1);
+            td.textContent = finalTruncated.toFixed(1);
             td.style.cursor = "pointer";
             td.onclick = () => {
-                document.getElementById("price").value = truncated;
+                document.getElementById("price").value = finalTruncated;
                 correctInjectFields();
             };
             row.appendChild(td);
 
-            current = truncated; // IMPORTANT: next step from here
+            priceTableBody.appendChild(row);
+            percentSeedInput.value = "";
         });
 
-        // Last: +10% of BASE
-        const finalPlus = base * 0.10;
-        const finalValue = base + finalPlus;
-        const finalTruncated = truncate1Decimal(finalValue);
 
-        const td = document.createElement("td");
-        td.textContent = finalTruncated.toFixed(1);
-        td.style.cursor = "pointer";
-        td.onclick = () => {
-            document.getElementById("price").value = finalTruncated;
-            correctInjectFields();
-        };
-        row.appendChild(td);
-
-        priceTableBody.appendChild(row);
-        percentSeedInput.value = "";
-    });
-
-
-    percentSeedInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault(); // Prevent form submission or reload
-            addRowBtn.click(); // Trigger the same function as button
-        }
-    });
-
-
-    document.querySelectorAll('[data-quantity]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const qty = btn.getAttribute('data-quantity');
-            document.getElementById('quantity').value = qty;
-            correctInjectFields();
-
-            // Remove active class from all
-            document.querySelectorAll('[data-quantity]').forEach(b => b.classList.remove('active'));
-
-            // Add active to clicked one
-            btn.classList.add('active');
+        percentSeedInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault(); // Prevent form submission or reload
+                addRowBtn.click(); // Trigger the same function as button
+            }
         });
-    });
 
 
-    document.getElementById("first-order-btn").addEventListener("click", () => {
-        try {
-            // ✅ Always regenerate fresh prices
-            localStorage.removeItem("pending_prices");
-            generatePricePoints();
+        document.querySelectorAll('[data-quantity]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const qty = btn.getAttribute('data-quantity');
+                document.getElementById('quantity').value = qty;
+                correctInjectFields();
 
-            let ltp = null;
-            let high = null;
-            let preClose = null;
+                // Remove active class from all
+                document.querySelectorAll('[data-quantity]').forEach(b => b.classList.remove('active'));
 
-            const blocks = document.querySelectorAll(".order__form--prodtype");
+                // Add active to clicked one
+                btn.classList.add('active');
+            });
+        });
 
-            blocks.forEach(block => {
-                const label = block.querySelector("label")?.innerText?.trim().toLowerCase();
-                if (!label) return;
+        // After injecting the form
+        document.getElementById("delete-pending-prices").addEventListener("click", () => {
+            if (confirm("⚠️ Are you sure you want to delete ALL pending prices?")) {
+                localStorage.removeItem("pending_prices");
+                allPrices = [];
+                successPrices = [];
+                console.log("✅ All pending prices deleted.");
+                alert("All pending prices cleared!");
+            }
+        });
 
-                if (label === "ltp") {
-                    const rawText = block.textContent || "";
-                    const matches = rawText.match(/([\d,]+\.\d+)/);
-                    if (matches && matches[1]) {
-                        ltp = parseFloat(matches[1].replace(/,/g, ""));
-                    }
-                }
 
-                if (label === "high") {
-                    const bTag = block.querySelector("b");
-                    if (bTag) {
-                        high = parseFloat(bTag.innerText.replace(/,/g, ""));
-                    } else {
+        document.getElementById("first-order-btn").addEventListener("click", () => {
+            try {
+                // ✅ Always regenerate fresh prices
+                localStorage.removeItem("pending_prices");
+                generatePricePoints();
+
+                let ltp = null;
+                let high = null;
+                let preClose = null;
+
+                const blocks = document.querySelectorAll(".order__form--prodtype");
+
+                blocks.forEach(block => {
+                    const label = block.querySelector("label")?.innerText?.trim().toLowerCase();
+                    if (!label) return;
+
+                    if (label === "ltp") {
                         const rawText = block.textContent || "";
                         const matches = rawText.match(/([\d,]+\.\d+)/);
                         if (matches && matches[1]) {
-                            high = parseFloat(matches[1].replace(/,/g, ""));
+                            ltp = parseFloat(matches[1].replace(/,/g, ""));
                         }
                     }
+
+                    if (label === "high") {
+                        const bTag = block.querySelector("b");
+                        if (bTag) {
+                            high = parseFloat(bTag.innerText.replace(/,/g, ""));
+                        } else {
+                            const rawText = block.textContent || "";
+                            const matches = rawText.match(/([\d,]+\.\d+)/);
+                            if (matches && matches[1]) {
+                                high = parseFloat(matches[1].replace(/,/g, ""));
+                            }
+                        }
+                    }
+
+                    if (label === "pre close") {
+                        const rawText = block.textContent || "";
+                        const match = rawText.match(/([\d,]+\.\d+)/);
+                        if (match && match[1]) {
+                            preClose = parseFloat(match[1].replace(/,/g, ""));
+                        }
+                    }
+                });
+
+                if (ltp !== null && high !== null) {
+                    console.log("✅ Captured LTP:", ltp, "| HIGH:", high);
+
+                    // Update floating panel
+                    document.getElementById("ltp").value = ltp;
+                    document.getElementById("price").value = high;
+                    document.getElementById("quantity").value = 10;
+
+                    if (preClose !== null) {
+                        document.getElementById("percent-seed").value = preClose;
+                        document.getElementById("add-percent-row").click();
+                        console.log("✅ Pre Close used:", preClose);
+                    } else {
+                        alert("❌ Pre Close not found.");
+                    }
+
+                    correctInjectFields();
+
+                    // Update real page form inputs
+                    const priceInput = document.querySelector('input[formcontrolname="price"]');
+                    const qtyInput = document.querySelector('input[formcontrolname="quantity"]');
+
+                    if (priceInput) {
+                        priceInput.value = high;
+                        priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+
+                    if (qtyInput) {
+                        qtyInput.value = 10;
+                        qtyInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+
+                    // ✅ Auto-click BUY button
+                    const buttons = document.querySelectorAll("button.btn-primary");
+                    const buyButton = Array.from(buttons).find(btn => btn.textContent.trim().toUpperCase() === "BUY");
+
+                    if (buyButton && !buyButton.disabled) {
+                        buyButton.click();
+                        console.log("✅ BUY button clicked automatically");
+                    } else {
+                        console.error("❌ BUY button not found or disabled");
+                        alert("❌ BUY button not found or disabled");
+                    }
+
+                } else {
+                    console.error("❌ Could not capture LTP or HIGH");
+                    alert("❌ Could not capture LTP or HIGH values. Please refresh or check structure.");
                 }
 
+            } catch (error) {
+                console.error("❌ Fatal error in First Order button:", error);
+                alert("❌ Error capturing LTP / HIGH");
+            }
+        });
+
+
+
+
+
+        document.getElementById("use-preclose-btn").addEventListener("click", () => {
+            const blocks = document.querySelectorAll(".order__form--prodtype");
+            let preClose = null;
+
+            blocks.forEach(block => {
+                const label = block.querySelector("label")?.innerText?.trim().toLowerCase();
                 if (label === "pre close") {
-                    const rawText = block.textContent || "";
-                    const match = rawText.match(/([\d,]+\.\d+)/);
+                    const raw = block.textContent || "";
+                    const match = raw.match(/([\d,]+\.\d+)/);
                     if (match && match[1]) {
                         preClose = parseFloat(match[1].replace(/,/g, ""));
                     }
                 }
             });
 
-            if (ltp !== null && high !== null) {
-                console.log("✅ Captured LTP:", ltp, "| HIGH:", high);
-
-                // Update floating panel
-                document.getElementById("ltp").value = ltp;
-                document.getElementById("price").value = high;
-                document.getElementById("quantity").value = 10;
-
-                if (preClose !== null) {
-                    document.getElementById("percent-seed").value = preClose;
-                    document.getElementById("add-percent-row").click();
-                    console.log("✅ Pre Close used:", preClose);
-                } else {
-                    alert("❌ Pre Close not found.");
-                }
-
-                correctInjectFields();
-
-                // Update real page form inputs
-                const priceInput = document.querySelector('input[formcontrolname="price"]');
-                const qtyInput = document.querySelector('input[formcontrolname="quantity"]');
-
-                if (priceInput) {
-                    priceInput.value = high;
-                    priceInput.dispatchEvent(new Event('input', { bubbles: true }));
-                }
-
-                if (qtyInput) {
-                    qtyInput.value = 10;
-                    qtyInput.dispatchEvent(new Event('input', { bubbles: true }));
-                }
-
-                // ✅ Auto-click BUY button
-                const buttons = document.querySelectorAll("button.btn-primary");
-                const buyButton = Array.from(buttons).find(btn => btn.textContent.trim().toUpperCase() === "BUY");
-
-                if (buyButton && !buyButton.disabled) {
-                    buyButton.click();
-                    console.log("✅ BUY button clicked automatically");
-                } else {
-                    console.error("❌ BUY button not found or disabled");
-                    alert("❌ BUY button not found or disabled");
-                }
-
+            if (preClose !== null) {
+                document.getElementById("percent-seed").value = preClose;
+                document.getElementById("add-percent-row").click();
+                console.log("✅ Pre Close used:", preClose);
             } else {
-                console.error("❌ Could not capture LTP or HIGH");
-                alert("❌ Could not capture LTP or HIGH values. Please refresh or check structure.");
-            }
-
-        } catch (error) {
-            console.error("❌ Fatal error in First Order button:", error);
-            alert("❌ Error capturing LTP / HIGH");
-        }
-    });
-
-
-
-
-
-    document.getElementById("use-preclose-btn").addEventListener("click", () => {
-        const blocks = document.querySelectorAll(".order__form--prodtype");
-        let preClose = null;
-
-        blocks.forEach(block => {
-            const label = block.querySelector("label")?.innerText?.trim().toLowerCase();
-            if (label === "pre close") {
-                const raw = block.textContent || "";
-                const match = raw.match(/([\d,]+\.\d+)/);
-                if (match && match[1]) {
-                    preClose = parseFloat(match[1].replace(/,/g, ""));
-                }
+                alert("❌ Could not find 'Pre Close' value.");
             }
         });
 
-        if (preClose !== null) {
-            document.getElementById("percent-seed").value = preClose;
-            document.getElementById("add-percent-row").click();
-            console.log("✅ Pre Close used:", preClose);
-        } else {
-            alert("❌ Could not find 'Pre Close' value.");
-        }
-    });
+
+        // Add this after document.body.appendChild(formDiv)
+        document.getElementById("get__it").addEventListener("click", () => {
+            const symbolId = document.getElementById("symbol__id").value;
+            if (!symbolId) {
+                alert("Please enter a Symbol ID");
+                return;
+            }
+
+            fetchStockQuote(symbolId);
+        });
 
 
-
-
-}
+    }
 
 //end of inject form
 
-function loadPendingPrices() {
-    const saved = localStorage.getItem("pending_prices");
-    if (saved) {
-        allPrices = JSON.parse(saved);
-        console.log("✅ Restored saved pending prices:", allPrices);
-    } else {
-        generatePricePoints();
+    function fetchStockQuote(symbolId) {
+        const url = `https://tms44.nepsetms.com.np/tmsapi/rtApi/ws/stockQuote/${symbolId}`;
+
+        // Get headers from textarea and parse them
+        const rawHeaders = document.getElementById("inject-header1").value;
+        const headers = parseHeaders(rawHeaders);
+
+        console.log(`Fetching stock quote for symbol ID: ${symbolId}`);
+        console.log("Using headers:", headers);
+
+        fetch(url, {
+            method: 'GET',
+            headers: headers,
+            credentials: 'include'
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Stock Quote Data:", data);
+
+                // Extract the first item from payload.data array
+                const stockData = data.payload.data[0];
+
+                // Update LTP field
+                if (stockData.ltp) {
+                    document.getElementById("ltp").value = stockData.ltp;
+
+                    // Calculate and set price as LTP + 2%
+                    const priceWith2Percent = stockData.ltp * 1.02;
+                    document.getElementById("price").value = Math.floor(priceWith2Percent * 10) / 10;
+                }
+
+                // Update symbol field if available
+                if (stockData.security?.id) {
+                    document.getElementById("symbol").value = stockData.security.id;
+                }
+
+                // Handle percent-seed based on closePrice and openPrice
+                if (stockData.closePrice) {
+                    const percentSeed = document.getElementById("percent-seed");
+                    percentSeed.value = stockData.closePrice;
+                    // Trigger click on add-percent-row button
+                    document.getElementById("add-percent-row").click();
+
+                    // Check if openPrice is different from closePrice
+                    if (stockData.openPrice && stockData.openPrice !== stockData.closePrice) {
+                        percentSeed.value = stockData.openPrice;
+                        // Trigger click on add-percent-row button
+                        document.getElementById("add-percent-row").click();
+                    }
+
+
+                }
+
+                // Update all form fields
+                correctInjectFields();
+
+
+            })
+            .catch(error => {
+                console.error("Error fetching stock quote:", error);
+                alert(`Error fetching data: ${error.message}`);
+            });
     }
-}
 
-function savePendingPrices() {
-    localStorage.setItem("pending_prices", JSON.stringify(allPrices));
-}
+// Your existing parseHeaders function will be used
+    function parseHeaders(raw) {
+        const lines = raw.trim().split(/\r?\n/);
+        const headers = {};
 
+        for (const line of lines) {
+            const [key, ...vals] = line.split(":");
+            const name = key?.trim();
+            const value = vals.join(":").trim();
 
+            // Reject invalid keys (empty or start with ':')
+            if (
+                !name ||
+                name.startsWith(":") ||
+                !/^[\w!#$%&'*+.^_`|~-]+$/.test(name)
+            ) {
+                continue;
+            }
 
-function generatePricePoints() {
-    const ltp = parseFloat(document.getElementById("ltp").value);
-    const up = ltp + (ltp * 0.02);
-    const down = ltp - (ltp * 0.02);
-    const step = 0.1;
+            headers[name] = value;
+        }
 
-    // allPrices = [];
-
-    const upperLimit = Math.floor(up * 10) / 10;
-    let lowerLimit = Math.ceil(down * 10) / 10;
-
-    // 🔒 Ensure lowerLimit is not mistakenly rounded down due to floating-point precision
-    if (lowerLimit <= down) {
-        lowerLimit += 0.1;
-        lowerLimit = Math.round(lowerLimit * 10) / 10;
+        return headers;
     }
 
-    for (let p = lowerLimit; p <= upperLimit + 0.001; p += step) {
-        const price = Math.round(p * 10) / 10;
-        allPrices.push(price);
+    function loadPendingPrices() {
+        const saved = localStorage.getItem("pending_prices");
+        if (saved) {
+            allPrices = JSON.parse(saved);
+            console.log("✅ Restored saved pending prices:", allPrices);
+        } else {
+            generatePricePoints();
+        }
     }
 
-    console.log(`✅ Final Range: ${lowerLimit} → ${upperLimit}`);
-    console.log("✅ Final Price List:", allPrices);
-    savePendingPrices();
-}
+    function savePendingPrices() {
+        localStorage.setItem("pending_prices", JSON.stringify(allPrices));
+    }
+
+
+
+    function generatePricePoints() {
+        const ltp = parseFloat(document.getElementById("ltp").value);
+        const up = ltp + (ltp * 0.02);
+        const down = ltp - (ltp * 0.02);
+        const step = 0.1;
+
+        // allPrices = [];
+
+        const upperLimit = Math.floor(up * 10) / 10;
+        let lowerLimit = Math.ceil(down * 10) / 10;
+
+        // 🔒 Ensure lowerLimit is not mistakenly rounded down due to floating-point precision
+        if (lowerLimit <= down) {
+            lowerLimit += 0.1;
+            lowerLimit = Math.round(lowerLimit * 10) / 10;
+        }
+
+        for (let p = lowerLimit; p <= upperLimit + 0.001; p += step) {
+            const price = Math.round(p * 10) / 10;
+            allPrices.push(price);
+        }
+
+        console.log(`✅ Final Range: ${lowerLimit} → ${upperLimit}`);
+        console.log("✅ Final Price List:", allPrices);
+        savePendingPrices();
+    }
 
 
 
 
 
-function addOrderRecord(price, quantity, orderNumber) {
-    const table = document.getElementById('order-records-table').querySelector('tbody');
-    const row = document.createElement('tr');
-    row.innerHTML = `
+    function addOrderRecord(price, quantity, orderNumber) {
+        const table = document.getElementById('order-records-table').querySelector('tbody');
+        const row = document.createElement('tr');
+        row.innerHTML = `
       <td>${price}</td>
       <td>${quantity}</td>
       <td>${orderNumber}</td>
     `;
-    table.appendChild(row);
-}
-
-
-function updateContentLengthInHeader() {
-    const headerTextarea = document.getElementById("inject-header");
-    const bodyTextarea = document.getElementById("inject-body");
-
-    const headers = parseHeaders(headerTextarea.value);
-    const body = bodyTextarea.value || "";
-
-    // Calculate actual byte length
-    const encoder = new TextEncoder();
-    const contentLength = encoder.encode(body).length;
-
-    // Update the header object
-    headers["content-length"] = contentLength.toString();
-
-    // Re-render the headers textarea
-    const updatedHeader = Object.entries(headers)
-        .map(([k, v]) => `${k}: ${v}`)
-        .join("\n");
-
-    headerTextarea.value = updatedHeader;
-}
-
-
-function resetCounters() {
-    // Ensure requestCounters exists
-    if (!window.requestCounters) {
-        window.requestCounters = {
-            success: 0,
-            fail: 0,
-            pending: 0
-        };
-    } else {
-        window.requestCounters.success = 0;
-        window.requestCounters.fail = 0;
-        window.requestCounters.pending = 0;
-    }
-    updateCountersDisplay();
-}
-
-function updateCountersDisplay() {
-    // Ensure requestCounters exists
-    if (!window.requestCounters) {
-        window.requestCounters = {
-            success: 0,
-            fail: 0,
-            pending: 0
-        };
+        table.appendChild(row);
     }
 
-    // Update the DOM elements
-    document.getElementById("success-counter").textContent = window.requestCounters.success;
-    document.getElementById("fail-counter").textContent = window.requestCounters.fail;
-    document.getElementById("pending-counter").textContent = window.requestCounters.pending;
-}
 
-function setupTabs() {
-    const tabButtons = document.querySelectorAll('.tab-button');
+    function updateContentLengthInHeader() {
+        const headerTextarea = document.getElementById("inject-header");
+        const bodyTextarea = document.getElementById("inject-body");
+        const body = bodyTextarea.value || "";
 
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            // Remove active class from all buttons and content
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
+        // Calculate actual byte length
+        const encoder = new TextEncoder();
+        const contentLength = encoder.encode(body).length;
 
-            // Add active class to clicked button and corresponding content
-            button.classList.add('active');
-            const tabId = button.getAttribute('data-tab');
-            document.getElementById(`${tabId}-tab`).classList.add('active');
+        // Parse headers while preserving original structure
+        const lines = headerTextarea.value.split('\n');
+        let foundContentLength = false;
+
+        // Update or add content-length header
+        const updatedLines = lines.map(line => {
+            const trimmed = line.trim();
+
+            // Skip empty lines
+            if (!trimmed) return line;
+
+            // Handle HTTP/2 pseudo-headers (start with :)
+            if (trimmed.startsWith(':')) return line;
+
+            // Check if this is the content-length line
+            if (trimmed.toLowerCase().startsWith('content-length:')) {
+                foundContentLength = true;
+                return `content-length: ${contentLength}`;
+            }
+
+            return line;
         });
-    });
-}
 
-function setupCalculationButton() {
-    document.getElementById("calculate").onclick = () => {
-        const initialPrice = parseFloat(document.getElementById("initial_price").value);
-        if (isNaN(initialPrice)) {
-            alert("Please enter a valid initial price");
+        // Add content-length if it didn't exist
+        if (!foundContentLength) {
+            updatedLines.push(`content-length: ${contentLength}`);
+        }
+
+        // Update the textarea (only if changed)
+        const newValue = updatedLines.join('\n');
+        if (headerTextarea.value !== newValue) {
+            headerTextarea.value = newValue;
+        }
+    }
+
+    function resetCounters() {
+        // Ensure requestCounters exists
+        if (!window.requestCounters) {
+            window.requestCounters = {
+                success: 0,
+                fail: 0,
+                pending: 0
+            };
+        } else {
+            window.requestCounters.success = 0;
+            window.requestCounters.fail = 0;
+            window.requestCounters.pending = 0;
+        }
+        updateCountersDisplay();
+    }
+
+    function updateCountersDisplay() {
+        // Ensure requestCounters exists
+        if (!window.requestCounters) {
+            window.requestCounters = {
+                success: 0,
+                fail: 0,
+                pending: 0
+            };
+        }
+
+        // Update the DOM elements
+        document.getElementById("success-counter").textContent = window.requestCounters.success;
+        document.getElementById("fail-counter").textContent = window.requestCounters.fail;
+        document.getElementById("pending-counter").textContent = window.requestCounters.pending;
+    }
+
+    function setupTabs() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Remove active class from all buttons and content
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                const tabId = button.getAttribute('data-tab');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
+        });
+    }
+
+    function setupCalculationButton() {
+        document.getElementById("calculate").onclick = () => {
+            const initialPrice = parseFloat(document.getElementById("initial_price").value);
+            if (isNaN(initialPrice)) {
+                alert("Please enter a valid initial price");
+                return;
+            }
+
+            const percentages = [2, 2, 2, 2, 2, 10];
+            const outputDiv = document.getElementById("calc-output");
+            outputDiv.innerHTML = "";
+
+            let current = initialPrice;
+
+            percentages.forEach((percent, index) => {
+                let base, value;
+
+                if (index === percentages.length - 1 && percent === 10) {
+                    // Final step: 10% of initial price
+                    base = initialPrice;
+                    value = +(base + (10 / 100) * base).toFixed(5);
+                } else {
+                    // Chain calculation with 2%
+                    base = current;
+                    value = +(base + (2 / 100) * base).toFixed(5);
+                    current = value;
+                }
+
+                const buttonValue = Math.floor(value * 10) / 10; // Truncate to 1 decimal
+                const row = document.createElement("div");
+                row.innerHTML = `${base.toFixed(4)} + ${percent}% = ${value.toFixed(4)} <button data-value="${buttonValue}" id="btn${index + 1}">${buttonValue}</button>`;
+                outputDiv.appendChild(row);
+            });
+
+            // Attach button click events
+            outputDiv.querySelectorAll("button").forEach(btn => {
+                btn.onclick = () => {
+                    document.getElementById("price").value = btn.dataset.value;
+                    correctInjectFields(); // Auto update payload with new price
+                    // Switch to the Order tab
+                    document.querySelector('.tab-button[data-tab="order"]').click();
+                };
+            });
+        };
+    }
+
+    function setupButtonHandlers() {
+        // Regular request handling
+        document.getElementById("inject-start").onclick = startRegularRequests;
+        document.getElementById("inject-stop").onclick = stopRegularRequests;
+
+        // Random price request handling
+        document.getElementById("start-random").onclick = startRandomPriceRequests;
+        document.getElementById("stop-random").onclick = stopRandomPriceRequests;
+
+
+    }
+
+    function startRegularRequests() {
+        stopAllRequests(); // Safety: stop any existing intervals
+        successCount = 0; // Reset the success counter when starting new requests
+
+        const rawHeader = document.getElementById("inject-header").value;
+        const body = document.getElementById("inject-body").value;
+        const headers = parseHeaders(rawHeader);
+
+        const price = parseFloat(document.getElementById("price").value);
+        const quantity = parseInt(document.getElementById("quantity").value);
+
+        const perSec = parseInt(document.getElementById("per_sec_request")?.value || "1");
+        const delay = perSec > 0 ? Math.floor(1000 / perSec) : 1000;
+
+        interval = setInterval(() => {
+            sendTradeRequest(headers, body, price, quantity, null, true);
+        }, delay);
+    }
+
+    function stopRegularRequests() {
+        clearInterval(interval);
+        interval = null;
+    }
+
+    function startRandomPriceRequests() {
+        stopAllRequests(); // Clear previous runs
+        const ltp = parseFloat(document.getElementById("ltp").value);
+        const upper = parseFloat(document.getElementById("price").value);
+        const statusDiv = document.getElementById("random-status");
+
+        if (isNaN(ltp) || isNaN(upper)) {
+            alert("Invalid LTP or Price");
             return;
         }
 
-        const percentages = [2, 2, 2, 2, 2, 10];
-        const outputDiv = document.getElementById("calc-output");
-        outputDiv.innerHTML = "";
+        loadPendingPrices(); // Load or generate allPrices
+        successPrices = []; // Reset success tracking
 
-        let current = initialPrice;
+        // ✅ Split into two batches
+        const lowerToLTP = allPrices.filter(p => p <= ltp);
+        const LTPToUpper = allPrices.filter(p => p > ltp);
 
-        percentages.forEach((percent, index) => {
-            let base, value;
+        // Send both batches with 1-second delay between them
+        sendAllPrices(lowerToLTP, "lowerToLTP");
+        setTimeout(() => sendAllPrices(LTPToUpper, "LTPToUpper"), 1000);
 
-            if (index === percentages.length - 1 && percent === 10) {
-                // Final step: 10% of initial price
-                base = initialPrice;
-                value = +(base + (10 / 100) * base).toFixed(5);
-            } else {
-                // Chain calculation with 2%
-                base = current;
-                value = +(base + (2 / 100) * base).toFixed(5);
-                current = value;
-            }
+        // Start retry loop from second 2 onward
+        setTimeout(() => retryUntilSuccess(), 2000);
 
-            const buttonValue = Math.floor(value * 10) / 10; // Truncate to 1 decimal
-            const row = document.createElement("div");
-            row.innerHTML = `${base.toFixed(4)} + ${percent}% = ${value.toFixed(4)} <button data-value="${buttonValue}" id="btn${index + 1}">${buttonValue}</button>`;
-            outputDiv.appendChild(row);
-        });
-
-        // Attach button click events
-        outputDiv.querySelectorAll("button").forEach(btn => {
-            btn.onclick = () => {
-                document.getElementById("price").value = btn.dataset.value;
-                correctInjectFields(); // Auto update payload with new price
-                // Switch to the Order tab
-                document.querySelector('.tab-button[data-tab="order"]').click();
-            };
-        });
-    };
-}
-
-function setupButtonHandlers() {
-    // Regular request handling
-    document.getElementById("inject-start").onclick = startRegularRequests;
-    document.getElementById("inject-stop").onclick = stopRegularRequests;
-
-    // Random price request handling
-    document.getElementById("start-random").onclick = startRandomPriceRequests;
-    document.getElementById("stop-random").onclick = stopRandomPriceRequests;
-
-
-}
-
-function startRegularRequests() {
-    stopAllRequests(); // Safety: stop any existing intervals
-
-    const rawHeader = document.getElementById("inject-header").value;
-    const body = document.getElementById("inject-body").value;
-    const headers = parseHeaders(rawHeader);
-
-    const price = parseFloat(document.getElementById("price").value);
-    const quantity = parseInt(document.getElementById("quantity").value);
-
-    const perSec = parseInt(document.getElementById("per_sec_request")?.value || "1");
-    const delay = perSec > 0 ? Math.floor(1000 / perSec) : 1000;
-
-    interval = setInterval(() => {
-        sendTradeRequest(headers, body, price, quantity, null, true);
-    }, delay);
-}
-
-function stopRegularRequests() {
-    clearInterval(interval);
-    interval = null;
-}
-
-function startRandomPriceRequests() {
-    stopAllRequests(); // Clear previous runs
-    const ltp = parseFloat(document.getElementById("ltp").value);
-    const upper = parseFloat(document.getElementById("price").value);
-    const statusDiv = document.getElementById("random-status");
-
-    if (isNaN(ltp) || isNaN(upper)) {
-        alert("Invalid LTP or Price");
-        return;
+        statusDiv.textContent = `📤 Sending ${allPrices.length} prices in batches...`;
     }
 
-    loadPendingPrices(); // Load or generate allPrices
-    successPrices = []; // Reset success tracking
-
-    // ✅ Split into two batches
-    const lowerToLTP = allPrices.filter(p => p <= ltp);
-    const LTPToUpper = allPrices.filter(p => p > ltp);
-
-    // Send both batches with 1-second delay between them
-    sendAllPrices(lowerToLTP, "lowerToLTP");
-    setTimeout(() => sendAllPrices(LTPToUpper, "LTPToUpper"), 1000);
-
-    // Start retry loop from second 2 onward
-    setTimeout(() => retryUntilSuccess(), 2000);
-
-    statusDiv.textContent = `📤 Sending ${allPrices.length} prices in batches...`;
-}
 
 
 
 
-
-function stopRandomPriceRequests() {
-    clearInterval(randomInterval);
-    randomInterval = null;
-    keepRetrying = false; // 🔒 Stop further retries
-    document.getElementById("random-status").textContent = "";
-}
-
-
-function stopAllRequests() {
-    stopRegularRequests();
-    stopRandomPriceRequests();
-}
-
-function sendTradeRequest(headers, body, price, quantity, callback, respectStopOnSuccess = true) {
-    if (!window.requestCounters) {
-        window.requestCounters = { success: 0, fail: 0, pending: 0 };
-    }
-    if (!window.requestHistory) {
-        window.requestHistory = [];
+    function stopRandomPriceRequests() {
+        clearInterval(randomInterval);
+        randomInterval = null;
+        keepRetrying = false; // 🔒 Stop further retries
+        document.getElementById("random-status").textContent = "";
     }
 
-    window.requestCounters.pending++;
-    updateCountersDisplay();
 
-    const logEntry = {
-        timestamp: new Date().toISOString(),
-        requestHeaders: headers,
-        requestBody: body,
-        responseStatus: null,
-        responseBody: null
-    };
+    function stopAllRequests() {
+        stopRegularRequests();
+        stopRandomPriceRequests();
+    }
 
-    fetch("https://tms44.nepsetms.com.np/tmsapi/orderApi/order/", {
-        method: "POST",
-        headers,
-        body,
-        credentials: "include"
-    })
-        .then(res => {
-            logEntry.responseStatus = res.status;
-            return res.text().then(text => {
-                logEntry.responseBody = text;
-                return { status: res.status, text };
-            });
-        })
-        .then(({ status, text }) => {
-            window.requestHistory.push(logEntry);
+    function sendTradeRequest(headers, body, price, quantity, callback, respectStopOnSuccess = true) {
 
-            const isSuccess = (() => {
-                try {
-                    const responseObj = JSON.parse(text);
-                    return responseObj.status === "200" || status === 200;
-                } catch {
-                    return false;
-                }
-            })();
 
-            if (isSuccess) {
-                window.requestCounters.success++;
-                showSuccessAlert();
-
-                // ✅ Record order number
-                const firstOrderCell = document.querySelector('table.table--data tbody tr td.text-center');
-                if (firstOrderCell) {
-                    const orderNumber = firstOrderCell.textContent.trim();
-                    if (orderNumber) {
-                        addOrderRecord(price, quantity, orderNumber);
-                        if (!window.successOrderNumbers.includes(orderNumber)) {
-                            window.successOrderNumbers.push(orderNumber);
-                        }
-                    }
-                }
-
-                // ✅ Check if need to stop on success
-                if (respectStopOnSuccess && document.getElementById("stop-on-success")?.checked) {
-                    stopRegularRequests(); // Not stopAllRequests, only regular
-                }
-
-            } else {
-                window.requestCounters.fail++;
-            }
-
-            window.requestCounters.pending--;
-            updateCountersDisplay();
-
-            if (typeof callback === "function") callback(isSuccess);
-
-        })
-        .catch(error => {
-            logEntry.responseBody = `Request failed: ${error}`;
-            window.requestHistory.push(logEntry);
-            window.requestCounters.fail++;
-            window.requestCounters.pending--;
-            updateCountersDisplay();
-            if (typeof callback === "function") callback(false);
-        });
-}
-
-function sendAllPrices(prices, batchName = "batch") {
-    console.log(`🚀 Sending ${prices.length} prices for batch: ${batchName}`);
-
-    const rawHeader = document.getElementById("inject-header").value;
-    const headers = parseHeaders(rawHeader);
-    const baseBody = document.getElementById("inject-body").value;
-    const quantity = parseInt(document.getElementById("quantity").value);
-    const symbol = parseInt(document.getElementById("symbol").value);
-
-    prices.forEach((price) => {
-        if (successPrices.includes(price)) return;
-
-        const payload = JSON.parse(baseBody);
-        if (payload.orderBook) {
-            payload.orderBook.orderBookExtensions?.forEach(ext => {
-                ext.orderPrice = price;
-                ext.orderQuantity = quantity;
-            });
-            if (payload.orderBook.security) {
-                payload.orderBook.security.id = symbol;
-            }
+        if (!window.requestCounters) {
+            window.requestCounters = { success: 0, fail: 0, pending: 0 };
+        }
+        if (!window.requestHistory) {
+            window.requestHistory = [];
         }
 
-        sendTradeRequest(headers, JSON.stringify(payload), price, quantity, (success) => {
-            if (success && !successPrices.includes(price)) {
-                successPrices.push(price);
-                allPrices = allPrices.filter(p => p !== price);
-                savePendingPrices();
+        window.requestCounters.pending++;
+        updateCountersDisplay();
+
+        const logEntry = {
+            timestamp: new Date().toISOString(),
+            requestHeaders: headers,
+            requestBody: body,
+            responseStatus: null,
+            responseBody: null
+        };
+
+
+        let safeHeaders = sanitizeHeaders(headers);
+        fetch("https://tms44.nepsetms.com.np/tmsapi/orderApi/order/", {
+            method: "POST",
+            headers: safeHeaders, // ✅ Use sanitized headers
+            body,
+            credentials: "include"
+        })
+            .then(res => {
+                logEntry.responseStatus = res.status;
+                return res.text().then(text => {
+                    logEntry.responseBody = text;
+                    return { status: res.status, text };
+                });
+            })
+            .then(({ status, text }) => {
+                window.requestHistory.push(logEntry);
+
+                const isSuccess = (() => {
+                    try {
+                        const responseObj = JSON.parse(text);
+                        return responseObj.status === "200" || status === 200;
+                    } catch {
+                        return false;
+                    }
+                })();
+
+                if (isSuccess) {
+                    window.requestCounters.success++;
+                    successCount++; // Increment the success counter
+                    showSuccessAlert();
+
+                    // Record order number
+                    const firstOrderCell = document.querySelector('table.table--data tbody tr td.text-center');
+                    if (firstOrderCell) {
+                        const orderNumber = firstOrderCell.textContent.trim();
+                        if (orderNumber) {
+                            addOrderRecord(price, quantity, orderNumber);
+                            if (!window.successOrderNumbers.includes(orderNumber)) {
+                                window.successOrderNumbers.push(orderNumber);
+                            }
+                        }
+                    }
+
+
+                    if (respectStopOnSuccess &&
+                        document.getElementById("stop-on-success")?.checked &&
+                        successCount >= REQUIRED_SUCCESS_COUNT) {
+                        stopRegularRequests();
+
+                    }
+
+                } else {
+                    window.requestCounters.fail++;
+                }
+
+                window.requestCounters.pending--;
+                updateCountersDisplay();
+
+                if (typeof callback === "function") callback(isSuccess);
+            })
+            .catch(error => {
+                console.log(error);
+                logEntry.responseBody = `Request failed: ${error}`;
+                window.requestHistory.push(logEntry);
+                window.requestCounters.fail++;
+                window.requestCounters.pending--;
+                updateCountersDisplay();
+                if (typeof callback === "function") callback(false);
+            });
+    }
+
+    // Replace your existing sanitizeHeaders function with this improved version:
+    function sanitizeHeaders(headers) {
+        const clean = {};
+
+        // List of valid header names that are allowed in fetch
+        const validHeaderNames = [
+            "accept", "accept-charset", "accept-encoding", "accept-language",
+            "accept-ranges", "access-control-allow-credentials", "access-control-allow-headers",
+            "access-control-allow-methods", "access-control-allow-origin",
+            "access-control-expose-headers", "access-control-max-age",
+            "access-control-request-headers", "access-control-request-method",
+            "age", "allow", "authorization", "cache-control", "connection",
+            "content-disposition", "content-encoding", "content-language",
+            "content-length", "content-location", "content-range", "content-type",
+            "cookie", "date", "etag", "expect", "expires", "from", "host",
+            "if-match", "if-modified-since", "if-none-match", "if-range",
+            "if-unmodified-since", "last-modified", "location", "max-forwards",
+            "pragma", "proxy-authenticate", "proxy-authorization", "range", "referer",
+            "retry-after", "sec-websocket-extensions", "sec-websocket-key",
+            "sec-websocket-origin", "sec-websocket-protocol", "sec-websocket-version",
+            "server", "set-cookie", "set-cookie2", "te", "trailer", "transfer-encoding",
+            "upgrade", "user-agent", "vary", "via", "warning", "www-authenticate",
+            // Custom headers commonly used
+            "x-requested-with", "x-csrf-token", "x-xsrf-token"
+        ];
+
+        // Process each header
+        for (let key in headers) {
+            // Skip pseudo headers (starting with :) and empty keys
+            if (key.startsWith(":") || !key.trim()) {
+                continue;
             }
-        }, false);
-    });
-}
 
-function retryUntilSuccess() {
-    const remaining = allPrices.filter(p => !successPrices.includes(p));
-    if (remaining.length === 0) {
-        console.log("✅ All prices placed successfully!");
-        document.getElementById("random-status").textContent = "✅ All requests completed!";
-        return;
+            // Normalize key to lowercase
+            const normalizedKey = key.toLowerCase().trim();
+
+            // Skip if it's not in our whitelist (for safety)
+            // You can comment this out if you need custom headers
+            // if (!validHeaderNames.includes(normalizedKey)) {
+            //     console.warn(`Skipping non-standard header: ${normalizedKey}`);
+            //     continue;
+            // }
+
+            // Make sure value is a string
+            let value = headers[key];
+            if (value === null || value === undefined) {
+                continue; // Skip null/undefined values
+            }
+
+            // Convert value to string if it's not already
+            if (typeof value !== 'string') {
+                value = String(value);
+            }
+
+            // Add to clean headers
+            clean[normalizedKey] = value;
+        }
+
+        return clean;
     }
 
-    console.log(`🔁 Retrying ${remaining.length} prices...`);
-    sendAllPrices(remaining, "retry");
+    function sendAllPrices(prices, batchName = "batch") {
+        console.log(`🚀 Sending ${prices.length} prices for batch: ${batchName}`);
 
-    if (keepRetrying) {
-        setTimeout(retryUntilSuccess, 1000);
+        const rawHeader = document.getElementById("inject-header").value;
+        const headers = parseHeaders(rawHeader);
+        const baseBody = document.getElementById("inject-body").value;
+        const quantity = parseInt(document.getElementById("quantity").value);
+        const symbol = parseInt(document.getElementById("symbol").value);
+
+        prices.forEach((price) => {
+            if (successPrices.includes(price)) return;
+
+            const payload = JSON.parse(baseBody);
+            if (payload.orderBook) {
+                payload.orderBook.orderBookExtensions?.forEach(ext => {
+                    ext.orderPrice = price;
+                    ext.orderQuantity = quantity;
+                });
+                if (payload.orderBook.security) {
+                    payload.orderBook.security.id = symbol;
+                }
+            }
+
+            sendTradeRequest(headers, JSON.stringify(payload), price, quantity, (success) => {
+                if (success && !successPrices.includes(price)) {
+                    successPrices.push(price);
+                    allPrices = allPrices.filter(p => p !== price);
+                    savePendingPrices();
+                }
+            }, false);
+        });
     }
-}
+
+    function retryUntilSuccess() {
+        const remaining = allPrices.filter(p => !successPrices.includes(p));
+        if (remaining.length === 0) {
+            console.log("✅ All prices placed successfully!");
+            document.getElementById("random-status").textContent = "✅ All requests completed!";
+            return;
+        }
+
+        console.log(`🔁 Retrying ${remaining.length} prices...`);
+        sendAllPrices(remaining, "retry");
+
+        if (keepRetrying) {
+            setTimeout(retryUntilSuccess, 1000);
+        }
+    }
 
 
 
@@ -1268,11 +1516,11 @@ function retryUntilSuccess() {
 
 
 
-function showSuccessAlert() {
-    if (!document.getElementById("success-global-alert")) {
-        const alertBox = document.createElement("div");
-        alertBox.id = "success-global-alert";
-        alertBox.style = `
+    function showSuccessAlert() {
+        if (!document.getElementById("success-global-alert")) {
+            const alertBox = document.createElement("div");
+            alertBox.id = "success-global-alert";
+            alertBox.style = `
         position: fixed;
         top: 20px;
         left: 50%;
@@ -1287,65 +1535,96 @@ function showSuccessAlert() {
         z-index: 9999999;
         box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         `;
-        alertBox.textContent = "Order Success!";
-        document.body.appendChild(alertBox);
-    }
-
-    const alert = document.getElementById("success-global-alert");
-    if (!alert) return;
-    alert.style.display = "block";
-
-    clearTimeout(window.successAlertTimeout);
-    window.successAlertTimeout = setTimeout(() => {
-        alert.style.display = "none";
-    }, 5000);
-}
-
-function watchLTPPrice() {
-    const target = document.querySelector(".order__form--prodtype.price-display");
-    if (!target) return;
-
-    const observer = new MutationObserver(() => {
-        // Get all text nodes within the target element
-        const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, null, false);
-        let textNodes = [];
-        let node;
-        while (node = walker.nextNode()) {
-            textNodes.push(node);
+            alertBox.textContent = "Order Success!";
+            document.body.appendChild(alertBox);
         }
 
-        // Find the main price text (the one that's not in a span and contains the number)
-        const priceText = textNodes.find(node => {
-            return node.parentNode === target &&
-                node.textContent.trim() &&
-                /\d/.test(node.textContent);
+        const alert = document.getElementById("success-global-alert");
+        if (!alert) return;
+        alert.style.display = "block";
+
+        clearTimeout(window.successAlertTimeout);
+        window.successAlertTimeout = setTimeout(() => {
+            alert.style.display = "none";
+        }, 5000);
+    }
+
+    // Add this CSS for highlighting
+    const highlightStyle = document.createElement('style');
+    highlightStyle.textContent = `
+  .highlight-green {
+    background-color: #4CAF50 !important;
+    color: white !important;
+    font-weight: bold;
+  }
+`;
+    document.head.appendChild(highlightStyle);
+
+// Modified watchLTPPrice function
+    function watchLTPPrice() {
+        const target = document.querySelector(".order__form--prodtype.price-display");
+        if (!target) return;
+
+        const observer = new MutationObserver(() => {
+            const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, null, false);
+            let priceText;
+            let node;
+
+            while (node = walker.nextNode()) {
+                if (node.parentNode === target && /\d/.test(node.textContent)) {
+                    priceText = node.textContent.trim();
+                    break;
+                }
+            }
+
+            if (priceText) {
+                const numberText = priceText.replace(/,/g, '');
+                const ltp = parseFloat(numberText);
+
+                if (!isNaN(ltp)) {
+                    document.getElementById("ltp").value = ltp;
+                    showLtpAlert();
+                    correctInjectFields();
+                    highlightPriceTable(ltp); // Add this line
+                }
+            }
         });
 
-        if (priceText) {
-            const rawText = priceText.textContent.trim();
-            // Remove commas and parse the number
-            const numberText = rawText.replace(/,/g, '');
-            const ltp = parseFloat(numberText);
+        observer.observe(target, {childList: true, subtree: true, characterData: true});
+    }
 
-            if (!isNaN(ltp)) {
-                const raw = ltp + (ltp * 0.02);
-                const truncated = Math.floor(raw * 10) / 10; // truncate to 1 decimal
-                document.getElementById("ltp").value = ltp;
-                // document.getElementById("price").value = truncated;
-                showLtpAlert();
-                correctInjectFields();
+// New function to highlight the table
+    function highlightPriceTable(ltp) {
+        const needCheck = ltp + (ltp * 0.02);
+        const table = document.getElementById("price-table");
+        const cells = table.querySelectorAll("td");
+
+        cells.forEach(cell => {
+            // First remove the class to reset animation
+            cell.classList.remove("highlight-green");
+            void cell.offsetWidth; // Trigger reflow
+
+            const cellValue = parseFloat(cell.textContent);
+            if (!isNaN(cellValue) && needCheck <= cellValue) {
+                cell.classList.add("highlight-green");
             }
+        });
+    }
+
+// Initialize the highlighting when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if we already have an LTP value
+        const initialLtp = parseFloat(document.getElementById("ltp").value);
+        if (!isNaN(initialLtp)) {
+            highlightPriceTable(initialLtp);
         }
     });
 
-    observer.observe(target, {childList: true, subtree: true, characterData: true});
-}
-
-function showLtpAlert() {
-    if (!document.getElementById("ltp-global-alert")) {
-        const alertBox = document.createElement("div");
-        alertBox.id = "ltp-global-alert";
-        alertBox.style = `
+    function showLtpAlert() {
+        if (!document.getElementById("ltp-global-alert")) {
+            const alertBox = document.createElement("div");
+            alertBox.id = "ltp-global-alert";
+            alertBox.style = `
         display: none;
         position: fixed;
         top: 20px;
@@ -1361,113 +1640,117 @@ function showLtpAlert() {
         z-index: 9999999;
         box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         `;
-        alertBox.textContent = "LTP is changed";
-        document.body.appendChild(alertBox);
+            alertBox.textContent = "LTP is changed";
+            document.body.appendChild(alertBox);
+        }
+
+        const alert = document.getElementById("ltp-global-alert");
+        if (!alert) return;
+        alert.style.display = "block";
+
+        clearTimeout(window.ltpAlertTimeout);
+        window.ltpAlertTimeout = setTimeout(() => {
+            alert.style.display = "none";
+        }, 5000);
     }
 
-    const alert = document.getElementById("ltp-global-alert");
-    if (!alert) return;
-    alert.style.display = "block";
+    function correctInjectFields() {
+        const price = parseFloat(document.getElementById("price").value);
+        const symbol_id = parseInt(document.getElementById("symbol").value);
+        const quantity = parseInt(document.getElementById("quantity")?.value || 0);
+        const textarea = document.getElementById("inject-body");
 
-    clearTimeout(window.ltpAlertTimeout);
-    window.ltpAlertTimeout = setTimeout(() => {
-        alert.style.display = "none";
-    }, 5000);
-}
+        // Update displayed info in request tab
+        document.getElementById("display-symbol").textContent = symbol_id;
+        document.getElementById("display-quantity").textContent = quantity;
+        document.getElementById("display-price").textContent = price;
 
-function correctInjectFields() {
-    const price = parseFloat(document.getElementById("price").value);
-    const symbol_id = parseInt(document.getElementById("symbol").value);
-    const quantity = parseInt(document.getElementById("quantity")?.value || 0);
-    const textarea = document.getElementById("inject-body");
+        if (!textarea || isNaN(price) || isNaN(quantity) || isNaN(symbol_id)) {
+            return alert("Invalid price, quantity, or symbol ID");
+        }
 
-    // Update displayed info in request tab
-    document.getElementById("display-symbol").textContent = symbol_id;
-    document.getElementById("display-quantity").textContent = quantity;
-    document.getElementById("display-price").textContent = price;
+        let bodyText = textarea.value;
 
-    if (!textarea || isNaN(price) || isNaN(quantity) || isNaN(symbol_id)) {
-        return alert("Invalid price, quantity, or symbol ID");
-    }
+        try {
+            const payload = JSON.parse(bodyText);
 
-    let bodyText = textarea.value;
+            // Update values
+            if (payload.orderBook) {
+                payload.orderBook.orderBookExtensions?.forEach(ext => {
+                    ext.orderPrice = price;
+                    ext.orderQuantity = quantity;
+                });
 
-    try {
-        const payload = JSON.parse(bodyText);
-
-        // Update values
-        if (payload.orderBook) {
-            payload.orderBook.orderBookExtensions?.forEach(ext => {
-                ext.orderPrice = price;
-                ext.orderQuantity = quantity;
-            });
-
-            if (payload.orderBook.security) {
-                payload.orderBook.security.id = symbol_id;
+                if (payload.orderBook.security) {
+                    payload.orderBook.security.id = symbol_id;
+                }
             }
-        }
 
-        // Set updated and minified JSON
-        textarea.value = JSON.stringify(payload); // minified, no spacing
-    } catch (e) {
-        console.error("Error updating payload:", e);
-        alert("Error: Invalid JSON format in payload");
+            // Set updated and minified JSON
+            textarea.value = JSON.stringify(payload); // minified, no spacing
+        } catch (e) {
+            console.error("Error updating payload:", e);
+            alert("Error: Invalid JSON format in payload");
+        }
     }
-}
 
 
-function persistFormState() {
-    const elements = formDiv.querySelectorAll("input, textarea");
+    function persistFormState() {
+        const elements = formDiv.querySelectorAll("input, textarea");
 
-    elements.forEach(el => {
-        const key = `injector-${el.id}`;
-        if (el.type === "checkbox") {
-            el.addEventListener("change", () => {
-                localStorage.setItem(key, el.checked ? "1" : "0");
-            });
-        } else {
-            el.addEventListener("input", () => {
-                localStorage.setItem(key, el.value);
-            });
-        }
-    });
-}
-
-function restoreFormState() {
-    const elements = formDiv.querySelectorAll("input, textarea");
-
-    elements.forEach(el => {
-        const key = `injector-${el.id}`;
-        const saved = localStorage.getItem(key);
-
-        if (saved !== null) {
+        elements.forEach(el => {
+            const key = `injector-${el.id}`;
             if (el.type === "checkbox") {
-                el.checked = saved === "1";
+                el.addEventListener("change", () => {
+                    localStorage.setItem(key, el.checked ? "1" : "0");
+                });
             } else {
-                el.value = saved;
+                el.addEventListener("input", () => {
+                    localStorage.setItem(key, el.value);
+                });
+            }
+        });
+    }
+
+    function restoreFormState() {
+        const elements = formDiv.querySelectorAll("input, textarea");
+
+        elements.forEach(el => {
+            const key = `injector-${el.id}`;
+            const saved = localStorage.getItem(key);
+
+            if (saved !== null) {
+                if (el.type === "checkbox") {
+                    el.checked = saved === "1";
+                } else {
+                    el.value = saved;
+                }
+            }
+        });
+    }
+
+    function parseHeaders(raw) {
+        const lines = raw.trim().split(/\r?\n/);
+        const headers = {};
+        for (const line of lines) {
+            const [key, ...vals] = line.split(":");
+            if (key && vals.length) {
+                headers[key.trim()] = vals.join(":").trim();
             }
         }
-    });
-}
+        return headers;
+    }
 
-function parseHeaders(raw) {
-    const lines = raw.trim().split(/\r?\n/);
-    const headers = {};
-    for (const line of lines) {
-        const [key, ...vals] = line.split(":");
-        if (key && vals.length) {
-            headers[key.trim()] = vals.join(":").trim();
+    function removeForm() {
+        if (formDiv) {
+            formDiv.remove();
+            formDiv = null;
+            clearInterval(interval);
+            clearInterval(randomInterval);
         }
     }
-    return headers;
 }
 
-function removeForm() {
-    if (formDiv) {
-        formDiv.remove();
-        formDiv = null;
-        clearInterval(interval);
-        clearInterval(randomInterval);
-    }
-}
-console.clear();
+
+
+

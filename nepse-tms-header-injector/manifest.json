@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Network Headers Copier",
+  "version": "1.0",
+  "description": "Copy request headers from network requests in DevTools",
+  "permissions": [
+    "clipboardWrite"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "devtools_page": "devtools.html",
+  "action": {
+    "default_title": "Network Headers Copier"
+  }
+}

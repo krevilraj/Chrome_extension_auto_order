@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            width: 100%;
+            height: 100%;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        h3 {
+            margin-top: 0;
+        }
+        .instructions {
+            margin-bottom: 10px;
+        }
+        .success-message {
+            color: green;
+            font-weight: bold;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h3>Network Headers Copier</h3>
+    <div class="instructions">
+        <p>Right-click on any network request in the Network panel and select "Copy All Request Headers" to copy the headers to your clipboard.</p>
+    </div>
+    <div id="success-message" class="success-message">
+        Headers copied to clipboard!
+    </div>
+</div>
+<script src="panel.js"></script>
+</body>
+</html>
